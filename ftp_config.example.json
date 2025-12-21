@@ -1,0 +1,8 @@
+{
+  "host": "spelar.eu",
+  "server": "spelar.eu",
+  "username": "YOUR_USERNAME",
+  "password": "YOUR_PASSWORD",
+  "remote_path": "/spelar.eu/web",
+  "api_key": ""
+}

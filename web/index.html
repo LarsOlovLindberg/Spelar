@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spelar.eu – Småspel</title>
+  <link rel="stylesheet" href="./assets/styles.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="container header__inner">
+      <div>
+        <h1 class="title">Småspel</h1>
+        <p class="subtitle">Välj ett spel och justera svårighetsgrad.</p>
+      </div>
+
+      <div class="difficulty" aria-label="Svårighetsgrad">
+        <label class="difficulty__label" for="difficulty">Svårighet: <span id="difficultyValue">3</span>/5</label>
+        <input id="difficulty" type="range" min="1" max="5" step="1" value="3" />
+      </div>
+    </div>
+  </header>
+
+  <main class="container main">
+    <nav class="nav" aria-label="Spelmeny">
+      <button class="nav__btn" data-game="guess">Gissa talet</button>
+      <button class="nav__btn" data-game="reaction">Reaktion</button>
+      <button class="nav__btn" data-game="math">Snabb matte</button>
+      <button class="nav__btn" data-game="snake">Snake</button>
+      <button class="nav__btn" data-game="chess">Schack</button>
+      <button class="nav__btn" data-game="race">Bilbana</button>
+      <button class="nav__btn" data-game="invaders">Space Invaders</button>
+    </nav>
+
+    <section class="card" id="gameRoot" aria-live="polite"></section>
+
+    <section class="card help">
+      <h2 class="h2">Tips</h2>
+      <ul class="list">
+        <li>Svårighetsreglaget påverkar alla spel.</li>
+        <li>Din svårighet och vissa "bästa" sparas lokalt i webbläsaren.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer__inner">
+      <span>© spelar.eu</span>
+      <span class="footer__muted">Byggt som en enkel statisk sida.</span>
+    </div>
+  </footer>
+
+  <script src="./assets/app.js"></script>
+</body>
+</html>

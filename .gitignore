@@ -1,0 +1,9 @@
+# Local secrets / environment
+ftp_config.local.json
+backups/
+*.zip
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/

@@ -1,0 +1,6 @@
+# Prefer the static homepage over PHP front controllers
+DirectoryIndex index.html index.php
+
+# If mod_mime is enabled, ensure correct content types
+AddType text/css .css
+AddType application/javascript .js
