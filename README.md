@@ -1,17 +1,12 @@
-# Spelar.eu – Småspel (MVP)
+# spelar.eu – Trading Portal
 
-En enkel statisk sida med små spel och ett gemensamt reglage för svårighetsgrad.
+Statisk portal (utan build-step) för strategi, backtest, live, risk, data och dokumentation.
 
-Spel just nu:
-- Gissa talet
-- Reaktion
-- Snabb matte
-- Snake (pilar/WASD)
-- Schack (klicka för att flytta)
-- Bilbana (pilar/A/D)
-- Space Invaders (pilar/A/D + mellanslag)
+- UI: `web/index.html` (router som laddar sidfragment från `web/pages/`)
+- Datafiler: `web/data/` (valfritt; kan laddas via `data-csv` / `data-json` block)
 
 För drift/FTP-felsökning och kom-ihåg: se `docs/DRIFT.md`.
+Projektets inriktning: se `docs/INRIKTNING.md`.
 
 ## Kör lokalt
 
@@ -27,6 +22,46 @@ python -m http.server 5173 --directory .\web
 ```
 
 Öppna sedan `http://localhost:5173`.
+
+## Viktigt: för att se ändringar på spelar.eu måste du deploya
+
+När Copilot (eller du) ändrar filer i den här repot så syns det **bara lokalt** tills du laddar upp dem till webbhotellet.
+
+- Ändringar i UI / sidor (t.ex. `web/index.html` eller `web/pages/*.html`) kräver **full deploy av `web/`**.
+- Ändringar i snapshots (`web/data/*`) kan deployas som **data-only**.
+
+Exempel: deploya hela `web/` (så att UI-ändringar syns):
+
+```powershell
+Set-Location "c:\Users\lars-\OneDrive\spelar_eu"
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\deploy-ftp.ps1 -ConfigPath .\ftp_config.local.json
+```
+
+Exempel: sync från VPS + deploya bara `web/data/*`:
+
+```powershell
+Set-Location "c:\Users\lars-\OneDrive\spelar_eu"
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\sync-vps-stats.ps1 -HostName "root@77.42.42.124" -DeployDataOnly -FtpConfigPath .\ftp_config.local.json
+```
+
+### One-command: deploy allt
+
+Kör både full deploy av `web/` och VPS sync + data-only deploy i ett kommando:
+
+```powershell
+Set-Location "c:\Users\lars-\OneDrive\spelar_eu"
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\deploy-all.ps1
+```
+
+Vill du bara köra en del:
+
+```powershell
+# Bara web/
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\deploy-all.ps1 -DeployWeb
+
+# Bara VPS->data + deploy data-only
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\deploy-all.ps1 -DeployData
+```
 
 ## Deploy via FTP
 
@@ -84,7 +119,7 @@ Repo: `https://github.com/LarsOlovLindberg/Spelar`
 Set-Location "c:\Users\lars-\OneDrive\spelar_eu"
 git status
 git add -A
-git commit -m "Lägg till grafiska spel (Snake/Schack/Bilbana/Invaders)"
+git commit -m "Uppdatera trading-portalen"
 git branch -M main
 git push -u origin main
 ```

@@ -1,0 +1,21 @@
+<h2>pm – Execution (pm)</h2>
+<p>Logg och status för pm-order (buy YES/NO) baserat på edge. Här verifierar du att beslut faktiskt leder till order-försök och att de loggas.</p>
+
+<div class="grid">
+	<div class="card">
+		<h4>Vad du verifierar</h4>
+		<ul>
+			<li>Att nya rader dyker upp när edge triggar orderlogik.</li>
+			<li>Att market-id / token / side matchar din intention.</li>
+			<li>Att eventuella felkoder fångas (så du kan åtgärda dem).</li>
+		</ul>
+	</div>
+	<div class="card">
+		<h4>Datakälla</h4>
+		<p class="muted">CSV: <span class="mono">/web/data/pm_orders.csv</span></p>
+		<p class="muted">Tips: om den är tom men edge finns, då stoppas execution av regler/thresholds eller upstream-problem.</p>
+	</div>
+</div>
+
+<p class="muted">CSV: <span class="mono">/web/data/pm_orders.csv</span></p>
+<div data-csv="pm_orders.csv" data-max-rows="120"></div>

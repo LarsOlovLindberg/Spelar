@@ -1,0 +1,69 @@
+<h2>Översikt</h2>
+<p><strong>Mål:</strong> snabbt se om allt uppdateras “på riktigt” (VPS → sync → web/data → public portal).</p>
+
+<h3>Paper portfolio (saldo + trades)</h3>
+<p class="muted">Stort och tydligt saldo (paper) + vilka positioner som är öppna och vilka trades som gjorts.</p>
+
+<div data-paper-portfolio="pm_paper_portfolio.json"></div>
+
+<div class="grid">
+  <div class="card">
+    <h4>Öppna positioner</h4>
+    <p class="muted">CSV: <span class="mono">/web/data/pm_paper_positions.csv</span></p>
+    <div data-csv="pm_paper_positions.csv" data-max-rows="50"></div>
+  </div>
+  <div class="card">
+    <h4>Senaste trades (paper)</h4>
+    <p class="muted">CSV: <span class="mono">/web/data/pm_paper_trades.csv</span></p>
+    <div data-csv="pm_paper_trades.csv" data-max-rows="50"></div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h4>Så verifierar du att det fungerar</h4>
+    <ul>
+      <li>Öppna valfri sida i menyn och titta på <strong>Live-check</strong> överst: varje datafil har ålder och klickbar länk.</li>
+      <li>Om åldern står still eller blir röd: då är kedjan inte färsk (vanligast: VPS-agent stoppad, sync misslyckas, eller FTP laddar inte upp).</li>
+      <li>För CSV: header-raden är facit för vilka kolumner som finns; portalen visar bara snapshots.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>Snabb felsökning (utan att gissa)</h4>
+    <ul>
+      <li>Klicka en datafil-länk (t.ex. <span class="mono">edge_signals_live.csv</span>) och kontrollera att innehållet ser rimligt ut.</li>
+      <li>Jämför timestamp/”freshness” mot vad du förväntar dig.</li>
+      <li>Om filen inte går att öppna: den finns inte i <span class="mono">/web/data/</span> på webhotellet.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h4>Pipeline (pm → betas → edge → execution)</h4>
+    <div class="kv">
+      <strong>Scanner</strong><span class="mono">pm_market_opportunities_scan.py</span>
+      <strong>Beta-lärning</strong><span class="mono">pm_beta_learn_from_clob_history.py</span>
+      <strong>Live edge</strong><span class="mono">pm_edge_engine_from_learned_betas.py</span>
+      <strong>Execution</strong><span class="mono">pm_kraken_execution_from_edges.py</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h4>Snabblänkar</h4>
+    <p>
+      <a class="btn" href="#/pm/scanner">Market Scanner</a>
+      <a class="btn" href="#/pm/edge">Edge (live)</a>
+      <a class="btn" href="#/live/readiness">Live readiness</a>
+      <a class="btn" href="#/pm/hedge">Hedge-plan (Kraken)</a>
+      <a class="btn" href="#/pm/edge-stack">Edge stack</a>
+      <a class="btn" href="#/pm/auto">Auto execution</a>
+      <a class="btn" href="#/pm/execution">pm orders</a>
+      <a class="btn" href="#/kraken/futures">Kraken futures</a>
+    </p>
+  </div>
+</div>
+
+<h3>Senaste edge-signaler (CSV)</h3>
+<p class="muted">Datakälla: <span class="mono">/web/data/edge_signals_live.csv</span> (snapshot). Om denna inte uppdateras blir hela “live”-kedjan svår att lita på.</p>
+<div data-csv="edge_signals_live.csv" data-max-rows="50"></div>

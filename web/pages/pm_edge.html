@@ -1,0 +1,27 @@
+<h2>pm – Edge-rankning (live)</h2>
+<p>Visar “fair p” vs marknadspris och sorterar på edge. Detta är <strong>kärnan</strong>: om edge är rimlig kan resten (orders/hedge) kontrolleras.</p>
+
+<p class="muted">
+	CSV: <span class="mono">/web/data/edge_signals_live.csv</span>
+</p>
+
+<div class="grid">
+	<div class="card">
+		<h4>Vad betyder “edge” här?</h4>
+		<ul>
+			<li>Edge = skillnad mellan modellens fair probability och marknadspris (eller implied probability), enligt din pipeline.</li>
+			<li>Högst edge högst upp = kandidat för åtgärd (om regler/limits tillåter).</li>
+			<li>Om edge = 0 eller saknas ofta: det är en datapipeline-fråga, inte ett UI-problem.</li>
+		</ul>
+	</div>
+	<div class="card">
+		<h4>Snabb sanity-check</h4>
+		<ul>
+			<li>Klicka datafilen i Live-check och jämför en rad mot verkligt pris/fair p.</li>
+			<li>Kontrollera att header-raden innehåller kolumner du förväntar dig (t.ex. market, price, fair_p, edge).</li>
+			<li>Om siffrorna är nya men “fel”: justera modellen/pipeline, inte portalen.</li>
+		</ul>
+	</div>
+</div>
+
+<div data-csv="edge_signals_live.csv" data-max-rows="120"></div>

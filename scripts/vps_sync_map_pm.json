@@ -1,0 +1,22 @@
+{
+  "files": [
+    { "remote": "live_status.json", "local": "live_status.json" },
+    { "remote": "sources_health.json", "local": "sources_health.json" },
+    { "remote": "deribit_options_public.json", "local": "deribit_options_public.json" },
+    { "remote": "polymarket_status.json", "local": "polymarket_status.json" },
+    { "remote": "polymarket_clob_public.json", "local": "polymarket_clob_public.json" },
+    { "remote": "pm_open_orders.json", "local": "pm_open_orders.json" },
+    { "remote": "pm_scanner_log.csv", "local": "pm_scanner_log.csv" },
+    { "remote": "edge_signals_live.csv", "local": "edge_signals_live.csv" },
+    { "remote": "pm_orders.csv", "local": "pm_orders.csv" },
+    { "remote": "pm_paper_portfolio.json", "local": "pm_paper_portfolio.json" },
+    { "remote": "pm_paper_positions.csv", "local": "pm_paper_positions.csv" },
+    { "remote": "pm_paper_trades.csv", "local": "pm_paper_trades.csv" },
+    { "remote": "pm_paper_candidates.csv", "local": "pm_paper_candidates.csv" },
+    { "remote": "kraken_futures_public.json", "local": "kraken_futures_public.json" },
+    { "remote": "kraken_futures_private.json", "local": "kraken_futures_private.json" },
+    { "remote": "kraken_futures_signals.csv", "local": "kraken_futures_signals.csv" },
+    { "remote": "kraken_futures_fills.csv", "local": "kraken_futures_fills.csv" },
+    { "remote": "executed_trades.csv", "local": "executed_trades.csv" }
+  ]
+}

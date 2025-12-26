@@ -1,6 +1,20 @@
+# Disable caching for HTML (helps when changes "don't show up")
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|php)$">
+    Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+  </FilesMatch>
+</IfModule>
 # Prefer the static homepage over PHP front controllers
 DirectoryIndex index.html index.php
 
 # If mod_mime is enabled, ensure correct content types
 AddType text/css .css
 AddType application/javascript .js
+
+# Force UTF-8 for static assets (fixes Å/Ä/Ö if server sends wrong charset)
+<IfModule mod_mime.c>
+  AddDefaultCharset UTF-8
+  AddCharset UTF-8 .html .css .js .json .csv
+</IfModule>
+

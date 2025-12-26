@@ -2,54 +2,897 @@
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Spelar.eu – Småspel</title>
-  <link rel="stylesheet" href="./assets/styles.css" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>spelar.eu – Trading Portal</title>
+  <meta name="description" content="Portal för Polymarket↔Kraken edge och automatiska satsningar/trades." />
+
+  <style>
+    :root{
+      --bg:#0b0f17;
+      --panel:#0f1624;
+      --panel2:#111b2d;
+      --text:#e6edf7;
+      --muted:#a9b6cc;
+      --border:rgba(255,255,255,.08);
+      --accent:#6aa7ff;
+      --good:#58d68d;
+      --bad:#ff6a7a;
+      --warn:#ffd166;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 14px;
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:var(--font);
+      font-size:22px;
+      background: radial-gradient(1200px 800px at 20% 0%, rgba(106,167,255,.18), transparent 45%),
+                  radial-gradient(1200px 800px at 80% 20%, rgba(88,214,141,.10), transparent 45%),
+                  var(--bg);
+      color:var(--text);
+    }
+
+    .app{
+      display:grid;
+      grid-template-columns: 420px 1fr;
+      min-height:100vh;
+    }
+
+    /* Sidebar */
+    .sidebar{
+      position:sticky;
+      top:0;
+      height:100vh;
+      padding:18px 14px;
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border-right:1px solid var(--border);
+      overflow:auto;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:12px 12px 14px 12px;
+      border:1px solid var(--border);
+      background: rgba(15,22,36,.65);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom:12px;
+    }
+    .logo{
+      width:36px;height:36px;border-radius:12px;
+      background: linear-gradient(135deg, rgba(106,167,255,.9), rgba(88,214,141,.85));
+      display:grid;place-items:center;
+      color:#0b0f17;font-weight:800;
+      letter-spacing:.5px;
+      user-select:none;
+    }
+    .brand h1{
+      font-size:22px;
+      margin:0;
+      line-height:1.1;
+    }
+    .brand small{
+      display:block;
+      margin-top:3px;
+      color:var(--muted);
+      font-size:16px;
+      font-family:var(--mono);
+    }
+
+    .search{
+      margin:10px 0 12px 0;
+      display:flex;
+      gap:8px;
+      align-items:center;
+      padding:10px 10px;
+      border:1px solid var(--border);
+      background: rgba(15,22,36,.45);
+      border-radius: 12px;
+    }
+    .search input{
+      width:100%;
+      border:0;
+      outline:0;
+      background:transparent;
+      color:var(--text);
+      font-size:18px;
+    }
+    .search input::placeholder{color:rgba(169,182,204,.75)}
+
+    .nav{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .nav-section{
+      border:1px solid var(--border);
+      background: rgba(15,22,36,.35);
+      border-radius: var(--radius);
+      overflow:hidden;
+    }
+    .nav-section .sec-title{
+      padding:10px 12px;
+      font-size:13px;
+      color:var(--muted);
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      border-bottom:1px solid var(--border);
+      background: rgba(255,255,255,.02);
+    }
+    .nav-items{padding:8px}
+    .nav a{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:10px 10px;
+      margin:2px 0;
+      text-decoration:none;
+      color:var(--text);
+      border-radius:12px;
+      border:1px solid transparent;
+      font-size:18px;
+    }
+    .nav a:hover{
+      background: rgba(106,167,255,.10);
+      border-color: rgba(106,167,255,.22);
+    }
+    .nav a.active{
+      background: rgba(106,167,255,.16);
+      border-color: rgba(106,167,255,.35);
+      box-shadow: 0 8px 22px rgba(106,167,255,.08);
+    }
+    .badge{
+      font-size:14px;
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      color:var(--muted);
+      font-family:var(--mono);
+      user-select:none;
+      white-space:nowrap;
+    }
+
+    .footer{
+      margin-top:12px;
+      padding:10px 12px;
+      color:var(--muted);
+      font-size:15px;
+      border:1px dashed var(--border);
+      border-radius: var(--radius);
+      background: rgba(15,22,36,.20);
+    }
+    .footer code{font-family:var(--mono);color:rgba(230,237,247,.85)}
+    .footer .row{display:flex;justify-content:space-between;gap:10px;margin-top:6px}
+    .dot{width:8px;height:8px;border-radius:99px;background:var(--warn);display:inline-block}
+    .dot.ok{background:var(--good)}
+    .dot.bad{background:var(--bad)}
+
+    /* Main */
+    .main{
+      padding:18px 18px 32px 18px;
+      overflow:auto;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      padding:14px 14px;
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(15,22,36,.55);
+      box-shadow: var(--shadow);
+      margin-bottom:14px;
+    }
+
+    .crumbs{
+      font-size:15px;
+      color:var(--muted);
+      letter-spacing:.02em;
+    }
+    .title{
+      margin:6px 0 0 0;
+      font-size:34px;
+      line-height:1.2;
+    }
+
+    .kpi{
+      font-size:44px;
+      font-weight:800;
+      letter-spacing:-0.02em;
+      line-height:1.05;
+    }
+
+    .actions{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    button, .btn{
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      color:var(--text);
+      padding:9px 11px;
+      border-radius: 12px;
+      cursor:pointer;
+      font-size:16px;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      user-select:none;
+    }
+    button:hover, .btn:hover{
+      border-color: rgba(106,167,255,.35);
+      background: rgba(106,167,255,.10);
+    }
+
+    .content{
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(15,22,36,.35);
+      box-shadow: var(--shadow);
+      padding:16px;
+      min-height: calc(100vh - 18px - 14px - 18px - 100px);
+    }
+
+    /* Ops / Live verification panel */
+    .opsbar{
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap:12px;
+      padding:14px;
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(15,22,36,.45);
+      box-shadow: var(--shadow);
+      margin-bottom:14px;
+    }
+    .opsbar h3{
+      margin:0 0 6px 0;
+      font-size:22px;
+      color:rgba(230,237,247,.96);
+    }
+    .opsbar p{
+      margin:6px 0;
+      color:rgba(230,237,247,.92);
+      line-height:1.55;
+    }
+    .opssteps{
+      margin:8px 0 0 18px;
+      color:rgba(230,237,247,.92);
+    }
+    .opssteps li{margin:6px 0}
+    .opsright{
+      border-left:1px solid var(--border);
+      padding-left:12px;
+    }
+    .liveSummary{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-top:2px;
+      color:var(--muted);
+      font-size:16px;
+    }
+    .filelist{margin-top:10px}
+    .fileRow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:8px 10px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      background: rgba(255,255,255,.02);
+      margin:8px 0;
+    }
+    .fileRow .left{display:flex;align-items:center;gap:10px;min-width:0}
+    .fileRow .name{font-family:var(--mono);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .fileRow .meta{font-family:var(--mono);font-size:15px;color:var(--muted);white-space:nowrap}
+    .fileRow .name{font-family:var(--mono);font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .notice{
+      border:1px solid rgba(106,167,255,.25);
+      background: rgba(106,167,255,.08);
+      border-radius: 12px;
+      padding:12px 12px;
+      margin-bottom:14px;
+    }
+    .notice strong{color:rgba(230,237,247,.96)}
+    .notice a{color:rgba(230,237,247,.96)}
+    .notice .mono{color:rgba(230,237,247,.92)}
+
+    /* Generic content styling */
+    h2{margin:0 0 10px 0;font-size:30px}
+    h3{margin:18px 0 8px 0;font-size:22px;color:rgba(230,237,247,.92)}
+    p{margin:8px 0;color:rgba(230,237,247,.92);line-height:1.7}
+    ul{margin:8px 0 8px 18px;color:rgba(230,237,247,.92)}
+    li{margin:6px 0}
+    code, pre{font-family:var(--mono)}
+    pre{
+      margin:10px 0;
+      padding:12px;
+      border-radius: 12px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.25);
+      overflow:auto;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap:12px;
+      margin-top:12px;
+    }
+    .card{
+      grid-column: span 6;
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(15,22,36,.40);
+      padding:12px;
+    }
+    .card h4{margin:0 0 8px 0;font-size:18px;color:rgba(230,237,247,.95)}
+    .kv{
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap:8px;
+      color:var(--muted);
+      font-size:16px;
+    }
+    .kv strong{color:rgba(230,237,247,.92);font-weight:600}
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-size:16px;
+      padding:6px 10px;
+      border-radius: 999px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.03);
+      color:rgba(230,237,247,.92);
+    }
+
+    /* Tables */
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{
+      border-bottom:1px solid var(--border);
+      padding:9px 8px;
+      text-align:left;
+      font-size:17px;
+    }
+    th{color:var(--muted);font-weight:600}
+    tbody tr:hover{background: rgba(106,167,255,.06)}
+    .muted{color:var(--muted)}
+    .mono{font-family:var(--mono)}
+
+    /* Mobile */
+    @media (max-width: 980px){
+      .app{grid-template-columns: 1fr}
+      .sidebar{position:relative;height:auto}
+      .content{min-height:auto}
+      .card{grid-column: span 12}
+      .opsbar{grid-template-columns:1fr}
+      .opsright{border-left:0;padding-left:0;border-top:1px solid var(--border);padding-top:12px}
+    }
+  </style>
 </head>
+
 <body>
-  <header class="header">
-    <div class="container header__inner">
-      <div>
-        <h1 class="title">Småspel</h1>
-        <p class="subtitle">Välj ett spel och justera svårighetsgrad.</p>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">S</div>
+        <div>
+          <h1>spelar.eu</h1>
+          <small id="buildInfo">pm ↔ kraken · edge → auto</small>
+        </div>
       </div>
 
-      <div class="difficulty" aria-label="Svårighetsgrad">
-        <label class="difficulty__label" for="difficulty">Svårighet: <span id="difficultyValue">3</span>/5</label>
-        <input id="difficulty" type="range" min="1" max="5" step="1" value="3" />
+      <div class="search" title="Sök i meny">
+        <span class="muted">⌕</span>
+        <input id="navSearch" type="search" placeholder="Sök flik..." />
       </div>
-    </div>
-  </header>
 
-  <main class="container main">
-    <nav class="nav" aria-label="Spelmeny">
-      <button class="nav__btn" data-game="guess">Gissa talet</button>
-      <button class="nav__btn" data-game="reaction">Reaktion</button>
-      <button class="nav__btn" data-game="math">Snabb matte</button>
-      <button class="nav__btn" data-game="snake">Snake</button>
-      <button class="nav__btn" data-game="chess">Schack</button>
-      <button class="nav__btn" data-game="race">Bilbana</button>
-      <button class="nav__btn" data-game="invaders">Space Invaders</button>
-    </nav>
+      <nav class="nav" id="nav"></nav>
 
-    <section class="card" id="gameRoot" aria-live="polite"></section>
+      <div class="footer">
+        <div class="row">
+          <div><span class="dot ok" id="dotStatus"></span> <span id="statusText">Ready</span></div>
+          <div class="mono" id="clock">--:--:--</div>
+        </div>
+        <div class="row">
+          <div class="muted">Data: <code>/web/data/</code></div>
+          <div class="muted">Pages: <code>/web/pages/</code></div>
+        </div>
+      </div>
+    </aside>
 
-    <section class="card help">
-      <h2 class="h2">Tips</h2>
-      <ul class="list">
-        <li>Svårighetsreglaget påverkar alla spel.</li>
-        <li>Din svårighet och vissa "bästa" sparas lokalt i webbläsaren.</li>
-      </ul>
-    </section>
-  </main>
+    <main class="main">
+      <div class="topbar">
+        <div>
+          <div class="crumbs" id="crumbs">Start</div>
+          <h2 class="title" id="pageTitle">Översikt</h2>
+        </div>
+        <div class="actions">
+          <button id="btnReload" type="button">↻ Ladda om</button>
+        </div>
+      </div>
 
-  <footer class="footer">
-    <div class="container footer__inner">
-      <span>© spelar.eu</span>
-      <span class="footer__muted">Byggt som en enkel statisk sida.</span>
-    </div>
-  </footer>
+      <section class="opsbar" id="opsBar" aria-live="polite">
+        <div>
+          <h3>Live-check: vad du ser & varför</h3>
+          <p><strong>Inga siffror är hårdkodade i portalen.</strong> Sidorna visar snapshots från <span class="mono">/web/data/</span> (CSV/JSON).</p>
+          <p>Om “LIVE” blir gammalt eller rött betyder det oftast att kedjan inte uppdaterar filer i tid.</p>
+          <ul class="opssteps">
+            <li><span class="mono">VPS</span> skriver snapshots (CSV/JSON).</li>
+            <li><span class="mono">Sync</span> hämtar till <span class="mono">web/data</span>.</li>
+            <li><span class="mono">FTP</span> laddar upp till webhotellet.</li>
+          </ul>
+          <div class="liveSummary" id="opsSummary">Väljer sida…</div>
+        </div>
+        <div class="opsright">
+          <h3>Datakällor för sidan</h3>
+          <p class="muted">Filerna nedan är de som den här sidan förväntar sig (och som LIVE-status baseras på).</p>
+          <div class="filelist" id="opsFiles"></div>
+        </div>
+      </section>
 
-  <script src="./assets/app.js"></script>
+      <section class="content" id="content">
+        Laddar…
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // ----------------------------
+    // ROUTES / NAV STRUCTURE
+    // ----------------------------
+    // Focus: Polymarket ↔ Kraken edge + automated execution.
+    const NAV = [
+      {
+        section: "Polymarket ↔ Kraken",
+        items: [
+          { id:"start-overview", label:"Översikt", route:"#/start/overview", page:"start_overview.html", badge:"home", dataFiles:["pm_paper_portfolio.json","pm_paper_positions.csv","pm_paper_trades.csv","edge_signals_live.csv"] },
+          { id:"ops-todo", label:"Att göra (go-live)", route:"#/ops/todo", page:"todo_go_live.html", badge:"todo", dataFiles:["sources_health.json","pm_open_orders.json","kraken_futures_private.json","pm_orders.csv"] },
+          { id:"live-status", label:"Live status & felsökning", route:"#/live/status", page:"live_status.html", badge:"live", dataFiles:["live_status.json","executed_trades.csv"] },
+          { id:"live-readiness", label:"Live readiness (go/no-go)", route:"#/live/readiness", page:"live_readiness.html", badge:"ready", dataFiles:["live_status.json","sources_health.json","deribit_options_public.json","polymarket_status.json","polymarket_clob_public.json","pm_open_orders.json","pm_scanner_log.csv","edge_signals_live.csv","pm_hedge_rules.json","pm_orders.csv","pm_paper_portfolio.json","pm_paper_positions.csv","pm_paper_trades.csv","pm_paper_candidates.csv","kraken_futures_public.json","kraken_futures_private.json","kraken_futures_signals.csv","kraken_futures_fills.csv","executed_trades.csv"] },
+          { id:"pm-status", label:"Polymarket status", route:"#/pm/status", page:"polymarket.html", badge:"pm", dataFiles:["polymarket_status.json","pm_paper_portfolio.json","pm_paper_positions.csv","pm_paper_trades.csv","pm_paper_candidates.csv"] },
+          { id:"pm-scanner", label:"Market Scanner", route:"#/pm/scanner", page:"pm_scanner.html", badge:"scan", dataFiles:["pm_scanner_log.csv"] },
+          { id:"pm-edge", label:"Edge-rankning (live)", route:"#/pm/edge", page:"pm_edge.html", badge:"edge", dataFiles:["edge_signals_live.csv"] },
+          { id:"pm-hedge", label:"Hedge-plan (Kraken)", route:"#/pm/hedge", page:"pm_hedge.html", badge:"hedge", dataFiles:["pm_hedge_rules.json"] },
+          { id:"pm-stack", label:"Edge stack (översikt)", route:"#/pm/edge-stack", page:"project_edge_stack.html", badge:"stack", dataFiles:["edge_signals_live.csv","executed_trades.csv"] },
+          { id:"pm-auto", label:"Auto execution (pm → kraken)", route:"#/pm/auto", page:"project_pm_kraken.html", badge:"auto", dataFiles:["edge_signals_live.csv","executed_trades.csv"] },
+          { id:"pm-orders", label:"pm orders (pm_orders.csv)", route:"#/pm/execution", page:"pm_execution.html", badge:"orders", dataFiles:["pm_orders.csv"] },
+          { id:"kraken-fut", label:"Kraken futures (signals/fills)", route:"#/kraken/futures", page:"kraken_futures_edge.html", badge:"fut", dataFiles:["kraken_futures_signals.csv","kraken_futures_fills.csv"] },
+          { id:"pm-exec", label:"Execution log", route:"#/pm/execution-log", page:"live_execution_log.html", badge:"log", dataFiles:["executed_trades.csv"] }
+        ]
+      }
+    ];
+
+    const DEFAULT_ROUTE = "#/start/overview";
+
+    // ----------------------------
+    // DOM refs
+    // ----------------------------
+    const navEl = document.getElementById("nav");
+    const contentEl = document.getElementById("content");
+    const crumbsEl = document.getElementById("crumbs");
+    const titleEl = document.getElementById("pageTitle");
+    const navSearchEl = document.getElementById("navSearch");
+    const btnReload = document.getElementById("btnReload");
+    const clockEl = document.getElementById("clock");
+    const statusTextEl = document.getElementById("statusText");
+    const dotEl = document.getElementById("dotStatus");
+    const opsSummaryEl = document.getElementById("opsSummary");
+    const opsFilesEl = document.getElementById("opsFiles");
+
+    // ----------------------------
+    // Build sidebar
+    // ----------------------------
+    function buildNav(filterText=""){
+      navEl.innerHTML = "";
+      const q = (filterText || "").trim().toLowerCase();
+
+      for (const sec of NAV){
+        const visibleItems = sec.items.filter(it => {
+          if (!q) return true;
+          return (it.label.toLowerCase().includes(q) || it.badge.toLowerCase().includes(q) || it.route.toLowerCase().includes(q));
+        });
+
+        if (q && visibleItems.length === 0) continue;
+
+        const wrap = document.createElement("div");
+        wrap.className = "nav-section";
+
+        const title = document.createElement("div");
+        title.className = "sec-title";
+        title.textContent = sec.section;
+        wrap.appendChild(title);
+
+        const itemsEl = document.createElement("div");
+        itemsEl.className = "nav-items";
+
+        for (const it of visibleItems){
+          const a = document.createElement("a");
+          a.href = it.route;
+          a.dataset.route = it.route;
+
+          const left = document.createElement("span");
+          left.textContent = it.label;
+
+          const badge = document.createElement("span");
+          badge.className = "badge";
+          badge.textContent = it.badge;
+
+          a.appendChild(left);
+          a.appendChild(badge);
+          itemsEl.appendChild(a);
+        }
+
+        wrap.appendChild(itemsEl);
+        navEl.appendChild(wrap);
+      }
+
+      setActiveLink(location.hash || DEFAULT_ROUTE);
+    }
+
+    // ----------------------------
+    // Router
+    // ----------------------------
+    function findRoute(hash){
+      for (const sec of NAV){
+        for (const it of sec.items){
+          if (it.route === hash) return { section: sec.section, ...it };
+        }
+      }
+      return null;
+    }
+
+    function setActiveLink(hash){
+      document.querySelectorAll(".nav a").forEach(a => {
+        a.classList.toggle("active", a.dataset.route === hash);
+      });
+    }
+
+    async function loadPage(pageFile){
+      const url = `./pages/${pageFile}`;
+      const r = await fetch(url, { cache: "no-store" });
+      if (!r.ok) throw new Error(`Kunde inte ladda ${url} (${r.status})`);
+      return await r.text();
+    }
+
+    function setStatus(kind, text){
+      dotEl.className = "dot" + (kind ? ` ${kind}` : "");
+      statusTextEl.textContent = text;
+    }
+
+    function fileStatusKind(ageMs, ok){
+      if (!ok) return "bad";
+      if (!Number.isFinite(ageMs)) return "ok";
+      if (ageMs <= 5*60*1000) return "ok";
+      if (ageMs <= 30*60*1000) return "";
+      return "bad";
+    }
+
+    function renderOpsFiles(files, results){
+      if (!files || files.length === 0) {
+        return `<p class="muted">Den här sidan har inga kopplade datafiler.</p>`;
+      }
+
+      const byName = new Map((results || []).map(r => [r.file, r]));
+      const now = Date.now();
+
+      return files.map(file => {
+        const r = byName.get(file);
+        const ok = !!(r && r.ok);
+        const ageMs = (ok && Number.isFinite(r.lastModified)) ? Math.max(0, now - r.lastModified) : NaN;
+        const age = ok ? (Number.isFinite(ageMs) ? formatAge(ageMs) : "? (saknar Last-Modified)") : "saknas/ej läsbar";
+        const kind = fileStatusKind(ageMs, ok);
+        const href = `./data/${encodeURIComponent(file)}`;
+        return `
+          <div class="fileRow">
+            <div class="left">
+              <span class="dot ${kind}"></span>
+              <a class="name" href="${href}" target="_blank" rel="noopener">${escapeHtml(file)}</a>
+            </div>
+            <div class="meta">${escapeHtml(age)}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderNotice(route){
+      const files = (route && Array.isArray(route.dataFiles)) ? route.dataFiles : [];
+      const list = files.length
+        ? files.map(f => `<li class="mono"><a href="./data/${encodeURIComponent(f)}" target="_blank" rel="noopener">${escapeHtml(f)}</a></li>`).join("")
+        : "";
+
+      return `
+        <div class="notice">
+          <p><strong>Hur du verifierar att detta är live:</strong> klicka “Ladda om”, och kontrollera att filerna under uppdateras (ålder sjunker) och att innehållet matchar det du förväntar dig.</p>
+          ${files.length ? `<p class="muted" style="margin-top:8px">Den här sidan läser:</p><ul>${list}</ul>` : `<p class="muted">Den här sidan visar främst text/struktur och har inga kopplade datafiler.</p>`}
+        </div>
+      `;
+    }
+
+    function formatAge(ms){
+      if (!Number.isFinite(ms) || ms < 0) return "?";
+      const s = Math.floor(ms / 1000);
+      if (s < 60) return `${s}s`;
+      const m = Math.floor(s / 60);
+      if (m < 60) return `${m}m`;
+      const h = Math.floor(m / 60);
+      return `${h}h${String(m % 60).padStart(2,"0")}m`;
+    }
+
+    async function getLastModifiedForDataFile(file){
+      const url = `./data/${file}`;
+      // Prefer HEAD (fast). Fallback to GET if HEAD is blocked.
+      try{
+        const r = await fetch(url, { method: "HEAD", cache: "no-store" });
+        if (r.ok){
+          const lm = r.headers.get("Last-Modified");
+          if (lm) return { ok:true, file, lastModified: new Date(lm).getTime() };
+          // Some servers omit Last-Modified; treat as unknown.
+          return { ok:true, file, lastModified: NaN };
+        }
+      }catch(_e){ /* ignore */ }
+
+      try{
+        const r2 = await fetch(url, { cache: "no-store" });
+        if (!r2.ok) return { ok:false, file, lastModified: NaN };
+        const lm2 = r2.headers.get("Last-Modified");
+        return { ok:true, file, lastModified: lm2 ? new Date(lm2).getTime() : NaN };
+      }catch(_e2){
+        return { ok:false, file, lastModified: NaN };
+      }
+    }
+
+    async function updateLiveStatusForRoute(route){
+      const files = (route && Array.isArray(route.dataFiles)) ? route.dataFiles : [];
+      if (files.length === 0){
+        setStatus("ok", "Ready · LIVE: n/a");
+        opsSummaryEl.textContent = "Den här sidan har inga datafiler kopplade.";
+        opsFilesEl.innerHTML = renderOpsFiles(files, []);
+        return;
+      }
+
+      const results = await Promise.all(files.map(getLastModifiedForDataFile));
+      const ok = results.some(r => r.ok);
+      if (!ok){
+        setStatus("bad", `Ready · LIVE: kunde inte läsa data (${files[0]})`);
+        opsSummaryEl.textContent = "LIVE-fel: kunde inte läsa någon av sidans datafiler. Kontrollera att FTP/sync har laddat upp /web/data.";
+        opsFilesEl.innerHTML = renderOpsFiles(files, results);
+        return;
+      }
+
+      // Choose the newest known timestamp.
+      const now = Date.now();
+      let best = null;
+      for (const r of results){
+        if (!r.ok) continue;
+        if (!Number.isFinite(r.lastModified)) continue;
+        if (!best || r.lastModified > best.lastModified) best = r;
+      }
+
+      if (!best){
+        // No Last-Modified available; still indicate data is fetched from /web/data.
+        setStatus("ok", `Ready · LIVE: ./data/${files[0]}`);
+        opsSummaryEl.innerHTML = `LIVE: data laddas från <span class="mono">/web/data</span>, men servern skickar ingen <span class="mono">Last-Modified</span>. Klicka filerna för att verifiera innehåll.`;
+        opsFilesEl.innerHTML = renderOpsFiles(files, results);
+        return;
+      }
+
+      const ageMs = Math.max(0, now - best.lastModified);
+      const age = formatAge(ageMs);
+
+      // Thresholds: OK under 5 min, warn under 30 min, bad otherwise.
+      const kind = ageMs <= 5*60*1000 ? "ok" : (ageMs <= 30*60*1000 ? "" : "bad");
+      setStatus(kind, `Ready · LIVE: ${age} (${best.file})`);
+
+      opsSummaryEl.innerHTML = `Nyast uppdaterad fil: <span class="mono">${escapeHtml(best.file)}</span> · ålder <span class="mono">${escapeHtml(age)}</span>.`;
+      opsFilesEl.innerHTML = renderOpsFiles(files, results);
+    }
+
+    async function render(){
+      const hash = location.hash || DEFAULT_ROUTE;
+      const route = findRoute(hash) || findRoute(DEFAULT_ROUTE);
+
+      if (!route){
+        location.hash = DEFAULT_ROUTE;
+        return;
+      }
+
+      setActiveLink(route.route);
+
+      crumbsEl.textContent = `${route.section} / ${route.label}`;
+      titleEl.textContent = route.label;
+
+      setStatus("", "Loading…");
+
+      try{
+        const html = await loadPage(route.page);
+        contentEl.innerHTML = renderNotice(route) + html;
+
+        // Render CSV/JSON blocks placed inside pages
+        await hydrateDataBlocks();
+
+        // Show clearly that displayed metrics are live snapshots from /web/data
+        await updateLiveStatusForRoute(route);
+      }catch(e){
+        setStatus("bad", "Error");
+        contentEl.innerHTML = `
+          <h2>Kunde inte ladda sidan</h2>
+          <p class="muted mono">${escapeHtml(String(e))}</p>
+          <p>Kontrollera att filen finns i <span class="mono">/web/pages/</span>.</p>
+        `;
+      }
+    }
+
+    // ----------------------------
+    // CSV/JSON helpers (for /web/data/)
+    // ----------------------------
+    function escapeHtml(s){
+      return s.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+    }
+
+    function parseCsv(text){
+      // Minimal CSV parser (handles commas, quotes).
+      const rows = [];
+      let i = 0, field = "", row = [], inQuotes = false;
+
+      while (i < text.length){
+        const c = text[i];
+
+        if (inQuotes){
+          if (c === '"'){
+            if (text[i+1] === '"'){ field += '"'; i += 2; continue; }
+            inQuotes = false; i++; continue;
+          }
+          field += c; i++; continue;
+        }else{
+          if (c === '"'){ inQuotes = true; i++; continue; }
+          if (c === ","){ row.push(field); field=""; i++; continue; }
+          if (c === "\n"){
+            row.push(field); field="";
+            if (row.length > 1 || row[0] !== "") rows.push(row);
+            row = []; i++; continue;
+          }
+          if (c === "\r"){ i++; continue; }
+          field += c; i++; continue;
+        }
+      }
+      row.push(field);
+      if (row.length > 1 || row[0] !== "") rows.push(row);
+      return rows;
+    }
+
+    function renderTableFromRows(rows, maxRows=200){
+      if (!rows || rows.length === 0) return `<p class="muted">Ingen data.</p>`;
+      const head = rows[0];
+      const body = rows.slice(1, maxRows + 1);
+
+      const th = head.map(h => `<th>${escapeHtml(h)}</th>`).join("");
+      const tr = body.map(r => {
+        const tds = head.map((_, idx) => `<td class="mono">${escapeHtml(r[idx] ?? "")}</td>`).join("");
+        return `<tr>${tds}</tr>`;
+      }).join("");
+
+      const note = rows.length - 1 > maxRows
+        ? `<p class="muted">Visar ${maxRows} av ${rows.length - 1} rader.</p>` : "";
+
+      return `
+        ${note}
+        <table>
+          <thead><tr>${th}</tr></thead>
+          <tbody>${tr}</tbody>
+        </table>
+      `;
+    }
+
+    async function hydrateDataBlocks(){
+      const csvBlocks = Array.from(contentEl.querySelectorAll("[data-csv]"));
+      for (const el of csvBlocks){
+        const file = el.getAttribute("data-csv");
+        const maxRows = parseInt(el.getAttribute("data-max-rows") || "200", 10);
+        try{
+          const r = await fetch(`./data/${file}`, { cache: "no-store" });
+          if (!r.ok) throw new Error(`${file} (${r.status})`);
+          const text = await r.text();
+          const rows = parseCsv(text);
+          el.innerHTML = renderTableFromRows(rows, maxRows);
+        }catch(e){
+          el.innerHTML = `<p class="muted">Kunde inte ladda CSV: <span class="mono">${escapeHtml(String(e))}</span></p>`;
+        }
+      }
+
+      const jsonBlocks = Array.from(contentEl.querySelectorAll("[data-json]"));
+      for (const el of jsonBlocks){
+        const file = el.getAttribute("data-json");
+        try{
+          const r = await fetch(`./data/${file}`, { cache: "no-store" });
+          if (!r.ok) throw new Error(`${file} (${r.status})`);
+          const obj = await r.json();
+          el.innerHTML = `<pre>${escapeHtml(JSON.stringify(obj, null, 2))}</pre>`;
+        }catch(e){
+          el.innerHTML = `<p class="muted">Kunde inte ladda JSON: <span class="mono">${escapeHtml(String(e))}</span></p>`;
+        }
+      }
+
+      // Paper portfolio summary
+      const paperBlocks = Array.from(contentEl.querySelectorAll("[data-paper-portfolio]"));
+      for (const el of paperBlocks){
+        const file = el.getAttribute("data-paper-portfolio");
+        try{
+          const r = await fetch(`./data/${file}`, { cache: "no-store" });
+          if (!r.ok) throw new Error(`${file} (${r.status})`);
+          const obj = await r.json();
+
+          const cash = Number(obj?.cash_usd ?? NaN);
+          const equity = Number(obj?.equity_usd ?? NaN);
+          const upnl = Number(obj?.unrealized_pnl_usd ?? 0);
+          const rpnl = Number(obj?.realized_pnl_usd ?? 0);
+          const openPos = Number(obj?.open_positions ?? 0);
+          const ts = String(obj?.generated_at ?? "");
+
+          const fmt2 = (n) => Number.isFinite(n) ? n.toFixed(2) : "";
+          el.innerHTML = `
+            <div class="grid">
+              <div class="card">
+                <h4>Cash</h4>
+                <div class="mono kpi">$${escapeHtml(fmt2(cash))}</div>
+                <p class="muted">Open positions: <span class="mono">${escapeHtml(String(openPos))}</span></p>
+              </div>
+              <div class="card">
+                <h4>Equity</h4>
+                <div class="mono kpi">$${escapeHtml(fmt2(equity))}</div>
+                <p class="muted">PnL: <span class="mono">${escapeHtml(fmt2(rpnl))}</span> realized, <span class="mono">${escapeHtml(fmt2(upnl))}</span> unrealized</p>
+              </div>
+              <div class="card">
+                <h4>Senast uppdaterad</h4>
+                <p class="mono">${escapeHtml(ts)}</p>
+                <p class="muted">Källa: <span class="mono">${escapeHtml(String(file))}</span></p>
+              </div>
+            </div>
+          `;
+        }catch(e){
+          el.innerHTML = `<p class="muted">Kunde inte ladda paper-portfolio: <span class="mono">${escapeHtml(String(e))}</span></p>`;
+        }
+      }
+    }
+
+    // ----------------------------
+    // Events
+    // ----------------------------
+    window.addEventListener("hashchange", render);
+    btnReload.addEventListener("click", () => render());
+    navSearchEl.addEventListener("input", () => buildNav(navSearchEl.value));
+
+    // Clock
+    setInterval(() => {
+      const d = new Date();
+      const hh = String(d.getHours()).padStart(2,"0");
+      const mm = String(d.getMinutes()).padStart(2,"0");
+      const ss = String(d.getSeconds()).padStart(2,"0");
+      clockEl.textContent = `${hh}:${mm}:${ss}`;
+    }, 250);
+
+    // Init
+    buildNav();
+    if (!location.hash) location.hash = DEFAULT_ROUTE;
+    render();
+  </script>
 </body>
 </html>

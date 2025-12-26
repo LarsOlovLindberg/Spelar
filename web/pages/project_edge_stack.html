@@ -1,0 +1,29 @@
+<h2>Projekt – Edge Stack (pm → Kraken)</h2>
+<p>Samlad vy för hela stacken. Tanken är att du snabbt ska kunna svara: <strong>”har vi edge?”</strong> och <strong>”gjorde vi något?”</strong> utan att hoppa mellan många flikar.</p>
+
+<div class="grid">
+  <div class="card">
+    <h4>Hur du använder vyn</h4>
+    <ul>
+      <li>Om edge är färsk men loggen är tom: då är det troligen thresholds/regler som hindrar execution.</li>
+      <li>Om loggen uppdateras men edge är gammal: då kör execution på gamla signaler (risk).</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>Datakällor</h4>
+    <p class="muted"><span class="mono">edge_signals_live.csv</span> + <span class="mono">executed_trades.csv</span></p>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h4>Live edge</h4>
+    <p class="muted">CSV: <span class="mono">/web/data/edge_signals_live.csv</span></p>
+    <div data-csv="edge_signals_live.csv" data-max-rows="40"></div>
+  </div>
+  <div class="card">
+    <h4>Execution log</h4>
+    <p class="muted">CSV: <span class="mono">/web/data/executed_trades.csv</span></p>
+    <div data-csv="executed_trades.csv" data-max-rows="40"></div>
+  </div>
+</div>

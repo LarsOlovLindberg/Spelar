@@ -1,0 +1,8 @@
+# Line ending policy
+# Keep Linux scripts and Apache config as LF even on Windows.
+*.sh text eol=lf
+*.py text eol=lf
+web/.htaccess text eol=lf
+
+# PowerShell scripts are typically CRLF.
+*.ps1 text eol=crlf

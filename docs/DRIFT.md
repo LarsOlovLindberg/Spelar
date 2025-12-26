@@ -1,19 +1,13 @@
-# Drift / kom-ihåg – Spelar.eu (Småspel)
+# Drift / kom-ihåg – spelar.eu (Trading Portal)
 
 ## Struktur
 
 - Publika filer ligger i `web/`:
-  - `web/index.html` (startsidan)
-  - `web/assets/*` (JS/CSS)
+  - `web/index.html` (portal/SPA)
+  - `web/pages/*` (sidfragment som laddas via `fetch`)
+  - `web/data/*` (valfria datafiler som portalen kan läsa)
   - `web/.htaccess` (prioriterar `index.html`)
   - `web/index.php` (fallback om servern alltid kör PHP först)
-
-## Spel / kontroller
-
-- Snake: piltangenter eller WASD
-- Schack: klicka för att välja pjäs och klicka för att flytta
-- Bilbana: pilar eller A/D
-- Space Invaders: pilar eller A/D + mellanslag
 
 ## Vanliga problem
 
@@ -56,6 +50,18 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\deploy-ftp.ps1
 
 Scriptet laddar upp innehållet i `web/` till `remote_path`.
 
+## VPS → web/data (snapshots)
+
+- VPS-agenten skriver “latest” snapshots till `/opt/spelar_eu/vps/out/`.
+- Windows-scriptet `scripts/sync-vps-stats.ps1` kopierar ner dessa till `web/data/` enligt mapping-filen `scripts/vps_sync_map_pm.json`.
+- Nya viktiga snapshots (utöver CSV:erna) som nu också kan syncas:
+  - `sources_health.json`
+  - `polymarket_clob_public.json`
+  - `kraken_futures_public.json`
+  - `kraken_futures_private.json` (om API-nycklar finns på VPS)
+
+Notera: UI-ändringar (`web/index.html`, `web/pages/*`) kräver full deploy av `web/` för att synas på sajten.
+
 ## Lokal test
 
 ```powershell
@@ -79,7 +85,7 @@ Repo: `https://github.com/LarsOlovLindberg/Spelar`
 Set-Location "c:\Users\lars-\OneDrive\spelar_eu"
 git status
 git add -A
-git commit -m "Lägg till grafiska spel (Snake/Schack/Bilbana/Invaders)"
+git commit -m "Uppdatera trading-portalen"
 git branch -M main
 git push -u origin main
 ```

@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "markets": [
+    {
+      "name": "Example market",
+      "polymarket": {
+        "market_url": "https://polymarket.com/market/REPLACE_ME_SLUG"
+      },
+      "kraken_futures": {
+        "symbol": "PF_XBTUSD",
+        "testnet": false,
+        "ref_price_field": "markPrice"
+      },
+      "fair_model": {
+        "mode": "deribit_touch",
+        "currency": "BTC",
+        "barrier": 100000,
+        "expiry_iso": "2025-12-31T23:59:59Z",
+        "direction": "no_touch_above"
+      },
+      "hedge": {
+        "yes_side": "sell",
+        "no_side": "buy",
+        "notes": "Example: if YES is overpriced, hedge by selling futures. Replace with your real hedge logic."
+      }
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+﻿{
+  "files": [
+    { "remote": "futures_stats/current_stats.json", "local": "live_status.json" },
+    { "remote": "wave_stats/wave_live_stats.json", "local": "wave_live_stats.json" },
+    { "remote": "area_stats/current_stats.json", "local": "area_current_stats.json" }
+  ]
+}

@@ -1,7 +1,36 @@
 # Local secrets / environment
 ftp_config.local.json
+kraken_keys.json
+kraken_keys.local.json
+.env
+.env.*
+vps_target.local.json
+vps/systemd/spelar-agent.env.local
 backups/
 *.zip
+
+# Local logs / artifacts
+deploy.log
+deploy_run.log
+*.log
+out/
+
+# Data snapshots are produced externally (VPS) and synced into web/data/
+web/data/
+
+# Scratch / misc
+från annan ai/
+
+# VPS runtime artifacts
+vps/.venv/
+vps/out/
+
+# Python bytecode
+**/__pycache__/
+*.pyc
+
+# Autosync runtime artifacts
+.autosync/
 
 # OS / editor
 .DS_Store

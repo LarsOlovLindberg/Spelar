@@ -1,0 +1,21 @@
+<h2>pm – Market Scanner</h2>
+<p>Visar vad scannern hittar över tid. Använd detta för att verifiera att <strong>insamlingen</strong> fungerar (innan du ens pratar edge/hedge/execution).</p>
+
+<div class="grid">
+	<div class="card">
+		<h4>Tolkning (praktiskt)</h4>
+		<ul>
+			<li>Om listan slutar växa: scannern eller upstream-fetch har stannat.</li>
+			<li>Om raderna finns men “ser konstiga ut”: klicka filen och kontrollera header/kolumner.</li>
+			<li>Jämför “senaste rad” mot förväntad frekvens.</li>
+		</ul>
+	</div>
+	<div class="card">
+		<h4>Datakälla</h4>
+		<p class="muted">CSV: <span class="mono">/web/data/pm_scanner_log.csv</span></p>
+		<p class="muted">Tips: sortera mentalt på tid. Portalen visar bara senaste raderna.</p>
+	</div>
+</div>
+
+<p class="muted">CSV: <span class="mono">/web/data/pm_scanner_log.csv</span></p>
+<div data-csv="pm_scanner_log.csv" data-max-rows="120"></div>

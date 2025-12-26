@@ -1,0 +1,41 @@
+<h2>Live – Status & felsökning</h2>
+<p><strong>Syfte:</strong> kunna avgöra om systemet är “levande” utan att gissa. Den här sidan visar snapshots som portalen läser från <span class="mono">/web/data/</span>.</p>
+
+<div class="grid">
+	<div class="card">
+		<h4>Snabb verifikation (1 minut)</h4>
+		<ul>
+			<li>Titta på <strong>Live-check</strong> överst i portalen: filernas ålder ska minska efter “Ladda om”.</li>
+			<li>Klicka <span class="mono">live_status.json</span> och kontrollera att timestamp/fält ser rimliga ut.</li>
+			<li>Om <span class="mono">executed_trades.csv</span> är tom är det inte nödvändigtvis fel — men den ska uppdateras när något faktiskt exekveras.</li>
+		</ul>
+	</div>
+	<div class="card">
+		<h4>Vanliga felbilder</h4>
+		<ul>
+			<li><strong>LIVE blir rött/gammalt:</strong> snapshots uppdateras inte (VPS-agent stoppad / sync / FTP).</li>
+			<li><strong>LIVE ok men data ser fel ut:</strong> pipeline/logik producerar fel values (inte UI).</li>
+			<li><strong>Filer saknas:</strong> de finns inte i <span class="mono">/web/data/</span> på webhotellet.</li>
+		</ul>
+	</div>
+</div>
+
+<div class="grid">
+	<div class="card">
+		<h4>Heartbeat</h4>
+		<div class="pill"><span class="dot ok"></span> Running</div>
+		<p class="muted">JSON: <span class="mono">/web/data/live_status.json</span> (snabb status, senaste loop, ev. fel).</p>
+		<div data-json="live_status.json"></div>
+	</div>
+	<div class="card">
+		<h4>Senaste trades</h4>
+		<p class="muted">CSV: <span class="mono">/web/data/executed_trades.csv</span> (när något faktiskt exekveras ska nya rader synas här).</p>
+		<div data-csv="executed_trades.csv" data-max-rows="50"></div>
+	</div>
+</div>
+
+<h3>Tips</h3>
+<ul>
+	<li>Om du vill se Polymarket-uppkoppling separat: gå till <strong>Polymarket status</strong> i menyn.</li>
+	<li>Om du vill se signal → fill: gå till <strong>Kraken futures</strong> + <strong>Execution log</strong>.</li>
+</ul>

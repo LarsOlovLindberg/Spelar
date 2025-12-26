@@ -1,0 +1,32 @@
+<h2>Live – Execution log</h2>
+<p>Fills, fel, latens och eventuella avvikelser. Detta är din “svarta låda”: om något ser fel ut, börja här och följ bakåt.</p>
+
+<div class="grid">
+	<div class="card">
+		<h4>Vad du letar efter</h4>
+		<ul>
+			<li>Nya rader när systemet gör något.</li>
+			<li>Felrader/avvisningar (så du vet varför något inte gick igenom).</li>
+			<li>Att tider och market/symbol matchar det du tror att systemet kör.</li>
+		</ul>
+	</div>
+	<div class="card">
+		<h4>Datakälla</h4>
+		<p class="muted">CSV: <span class="mono">/web/data/executed_trades.csv</span></p>
+		<p class="muted">Tips: klicka filen i Live-check och kontrollera att den faktiskt uppdateras på servern.</p>
+	</div>
+</div>
+
+	<h3>Rekommenderade kolumner (för live)</h3>
+	<p class="muted">Portalen kräver inget fast schema, men för live-felsökning är det väldigt hjälpsamt om loggen innehåller några standardfält.</p>
+	<ul>
+		<li><span class="mono">ts</span> eller <span class="mono">timestamp</span> (UTC)</li>
+		<li><span class="mono">venue</span> (pm/kraken)</li>
+		<li><span class="mono">market</span>/<span class="mono">symbol</span></li>
+		<li><span class="mono">action</span> (signal/order/fill/cancel)</li>
+		<li><span class="mono">side</span>, <span class="mono">qty</span>, <span class="mono">price</span></li>
+		<li><span class="mono">status</span> + <span class="mono">error</span> (om något avvisas)</li>
+	</ul>
+
+<p class="muted">CSV: <span class="mono">/web/data/executed_trades.csv</span></p>
+<div data-csv="executed_trades.csv" data-max-rows="120"></div>

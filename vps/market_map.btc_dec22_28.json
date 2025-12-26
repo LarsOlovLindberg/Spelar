@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "markets": [
+    {
+      "name": "BTC reach 102k (Dec 22-28)",
+      "polymarket": { "market_url": "will-bitcoin-reach-102k-december-22-28" },
+      "kraken_futures": { "symbol": "PF_XBTUSD", "testnet": false, "ref_price_field": "markPrice" },
+      "fair_model": { "mode": "deribit_touch", "currency": "BTC", "barrier": 102000, "expiry_iso": "2025-12-29T05:00:00Z", "direction": "touch_above" },
+      "hedge": { "yes_side": "sell", "no_side": "buy" }
+    },
+    {
+      "name": "BTC reach 100k (Dec 22-28)",
+      "polymarket": { "market_url": "will-bitcoin-reach-100k-december-22-28" },
+      "kraken_futures": { "symbol": "PF_XBTUSD", "testnet": false, "ref_price_field": "markPrice" },
+      "fair_model": { "mode": "deribit_touch", "currency": "BTC", "barrier": 100000, "expiry_iso": "2025-12-29T05:00:00Z", "direction": "touch_above" },
+      "hedge": { "yes_side": "sell", "no_side": "buy" }
+    },
+    {
+      "name": "BTC reach 98k (Dec 22-28)",
+      "polymarket": { "market_url": "will-bitcoin-reach-98k-december-22-28" },
+      "kraken_futures": { "symbol": "PF_XBTUSD", "testnet": false, "ref_price_field": "markPrice" },
+      "fair_model": { "mode": "deribit_touch", "currency": "BTC", "barrier": 98000, "expiry_iso": "2025-12-29T05:00:00Z", "direction": "touch_above" },
+      "hedge": { "yes_side": "sell", "no_side": "buy" }
+    },
+    {
+      "name": "BTC reach 96k (Dec 22-28)",
+      "polymarket": { "market_url": "will-bitcoin-reach-96k-december-22-28" },
+      "kraken_futures": { "symbol": "PF_XBTUSD", "testnet": false, "ref_price_field": "markPrice" },
+      "fair_model": { "mode": "deribit_touch", "currency": "BTC", "barrier": 96000, "expiry_iso": "2025-12-29T05:00:00Z", "direction": "touch_above" },
+      "hedge": { "yes_side": "sell", "no_side": "buy" }
+    },
+    {
+      "name": "BTC reach 94k (Dec 22-28)",
+      "polymarket": { "market_url": "will-bitcoin-reach-94k-december-22-28" },
+      "kraken_futures": { "symbol": "PF_XBTUSD", "testnet": false, "ref_price_field": "markPrice" },
+      "fair_model": { "mode": "deribit_touch", "currency": "BTC", "barrier": 94000, "expiry_iso": "2025-12-29T05:00:00Z", "direction": "touch_above" },
+      "hedge": { "yes_side": "sell", "no_side": "buy" }
+    },
+    {
+      "name": "BTC reach 92k (Dec 22-28)",
+      "polymarket": { "market_url": "will-bitcoin-reach-92k-december-22-28" },
+      "kraken_futures": { "symbol": "PF_XBTUSD", "testnet": false, "ref_price_field": "markPrice" },
+      "fair_model": { "mode": "deribit_touch", "currency": "BTC", "barrier": 92000, "expiry_iso": "2025-12-29T05:00:00Z", "direction": "touch_above" },
+      "hedge": { "yes_side": "sell", "no_side": "buy" }
+    },
+    {
+      "name": "BTC reach 90k (Dec 22-28)",
+      "polymarket": { "market_url": "will-bitcoin-reach-90k-december-22-28" },
+      "kraken_futures": { "symbol": "PF_XBTUSD", "testnet": false, "ref_price_field": "markPrice" },
+      "fair_model": { "mode": "deribit_touch", "currency": "BTC", "barrier": 90000, "expiry_iso": "2025-12-29T05:00:00Z", "direction": "touch_above" },
+      "hedge": { "yes_side": "sell", "no_side": "buy" }
+    },
+
+    {
+      "name": "BTC dip to 86k (Dec 22-28)",
+      "polymarket": { "market_url": "will-bitcoin-dip-to-86k-december-22-28" },
+      "kraken_futures": { "symbol": "PF_XBTUSD", "testnet": false, "ref_price_field": "markPrice" },
+      "fair_model": { "mode": "deribit_touch", "currency": "BTC", "barrier": 86000, "expiry_iso": "2025-12-29T05:00:00Z", "direction": "touch_below" },
+      "hedge": { "yes_side": "sell", "no_side": "buy" }
+    },
+    {
+      "name": "BTC dip to 84k (Dec 22-28)",
+      "polymarket": { "market_url": "will-bitcoin-dip-to-84k-december-22-28" },
+      "kraken_futures": { "symbol": "PF_XBTUSD", "testnet": false, "ref_price_field": "markPrice" },
+      "fair_model": { "mode": "deribit_touch", "currency": "BTC", "barrier": 84000, "expiry_iso": "2025-12-29T05:00:00Z", "direction": "touch_below" },
+      "hedge": { "yes_side": "sell", "no_side": "buy" }
+    },
+    {
+      "name": "BTC dip to 82k (Dec 22-28)",
+      "polymarket": { "market_url": "will-bitcoin-dip-to-82k-december-22-28" },
+      "kraken_futures": { "symbol": "PF_XBTUSD", "testnet": false, "ref_price_field": "markPrice" },
+      "fair_model": { "mode": "deribit_touch", "currency": "BTC", "barrier": 82000, "expiry_iso": "2025-12-29T05:00:00Z", "direction": "touch_below" },
+      "hedge": { "yes_side": "sell", "no_side": "buy" }
+    },
+    {
+      "name": "BTC dip to 80k (Dec 22-28)",
+      "polymarket": { "market_url": "will-bitcoin-dip-to-80k-december-22-28" },
+      "kraken_futures": { "symbol": "PF_XBTUSD", "testnet": false, "ref_price_field": "markPrice" },
+      "fair_model": { "mode": "deribit_touch", "currency": "BTC", "barrier": 80000, "expiry_iso": "2025-12-29T05:00:00Z", "direction": "touch_below" },
+      "hedge": { "yes_side": "sell", "no_side": "buy" }
+    },
+    {
+      "name": "BTC dip to 78k (Dec 22-28)",
+      "polymarket": { "market_url": "will-bitcoin-dip-to-78k-december-22-28" },
+      "kraken_futures": { "symbol": "PF_XBTUSD", "testnet": false, "ref_price_field": "markPrice" },
+      "fair_model": { "mode": "deribit_touch", "currency": "BTC", "barrier": 78000, "expiry_iso": "2025-12-29T05:00:00Z", "direction": "touch_below" },
+      "hedge": { "yes_side": "sell", "no_side": "buy" }
+    },
+    {
+      "name": "BTC dip to 76k (Dec 22-28)",
+      "polymarket": { "market_url": "will-bitcoin-dip-to-76k-december-22-28" },
+      "kraken_futures": { "symbol": "PF_XBTUSD", "testnet": false, "ref_price_field": "markPrice" },
+      "fair_model": { "mode": "deribit_touch", "currency": "BTC", "barrier": 76000, "expiry_iso": "2025-12-29T05:00:00Z", "direction": "touch_below" },
+      "hedge": { "yes_side": "sell", "no_side": "buy" }
+    },
+    {
+      "name": "BTC dip to 74k (Dec 22-28)",
+      "polymarket": { "market_url": "will-bitcoin-dip-to-74k-december-22-28" },
+      "kraken_futures": { "symbol": "PF_XBTUSD", "testnet": false, "ref_price_field": "markPrice" },
+      "fair_model": { "mode": "deribit_touch", "currency": "BTC", "barrier": 74000, "expiry_iso": "2025-12-29T05:00:00Z", "direction": "touch_below" },
+      "hedge": { "yes_side": "sell", "no_side": "buy" }
+    }
+  ]
+}

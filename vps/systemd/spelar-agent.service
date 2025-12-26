@@ -1,0 +1,20 @@
+[Unit]
+Description=spelar.eu pm↔Kraken agent (writes CSV/JSON + optional FTP upload)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=spelar
+WorkingDirectory=/opt/spelar_eu
+EnvironmentFile=/etc/spelar-agent.env
+ExecStart=/opt/spelar_eu/vps/.venv/bin/python -m vps.vps_agent
+Restart=always
+RestartSec=3
+
+# Hardening (minimal, tweak as needed)
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

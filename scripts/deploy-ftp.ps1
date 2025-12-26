@@ -1,10 +1,29 @@
 param(
   [string]$ConfigPath = "./ftp_config.local.json",
   [string]$LocalRoot = "./web",
+  [string]$RemoteSubdir = "",
+  [string[]]$IncludeFiles = @(),
   [switch]$DryRun
 )
 
 $ErrorActionPreference = "Stop"
+
+$programDataFallback = Join-Path $env:ProgramData "spelar_eu\ftp_config.local.json"
+
+# Allow override via environment variable (useful for Task Scheduler / SYSTEM).
+if ($env:SPELAR_FTP_CONFIG -and $env:SPELAR_FTP_CONFIG.Trim() -ne "") {
+  $ConfigPath = $env:SPELAR_FTP_CONFIG.Trim()
+}
+
+if (-not (Test-Path -LiteralPath $ConfigPath)) {
+  try {
+    if (Test-Path -LiteralPath $programDataFallback) {
+      $ConfigPath = $programDataFallback
+    }
+  } catch {
+    # If access is denied probing ProgramData (e.g., locked-down ACL), ignore and keep original path.
+  }
+}
 
 if (-not (Test-Path -LiteralPath $ConfigPath)) {
   throw "Config not found: $ConfigPath (copy ftp_config.example.json -> ftp_config.local.json)"
@@ -62,17 +81,36 @@ function Upload-File([string]$localFile, [string]$remoteFileUrl) {
 
 $localRootFull = (Resolve-Path -LiteralPath $LocalRoot).Path
 
-$files = Get-ChildItem -LiteralPath $localRootFull -Recurse -File -Force |
-  Where-Object {
-    # Only deploy site content
-    $_.FullName -notmatch "\\\.git\\" -and
-    $_.FullName -notmatch "\\node_modules\\" -and
-    $_.FullName -notmatch "\\\.vscode\\"
+$files = @()
+if ($IncludeFiles -and $IncludeFiles.Count -gt 0) {
+  foreach ($relPath in $IncludeFiles) {
+    if (-not $relPath -or $relPath.Trim() -eq "") { continue }
+    $p = Join-Path $localRootFull $relPath
+    if (-not (Test-Path -LiteralPath $p)) {
+      throw "IncludeFiles path not found: $relPath (resolved: $p)"
+    }
+    $item = Get-Item -LiteralPath $p -Force
+    if ($item.PSIsContainer) {
+      throw "IncludeFiles must point to files, not directories: $relPath"
+    }
+    $files += $item
   }
+} else {
+  $files = Get-ChildItem -LiteralPath $localRootFull -Recurse -File -Force |
+    Where-Object {
+      # Only deploy site content
+      $_.FullName -notmatch "\\\.git\\" -and
+      $_.FullName -notmatch "\\node_modules\\" -and
+      $_.FullName -notmatch "\\\.vscode\\"
+    }
+}
 
 # Ensure remote base directories
 $baseUrl = "ftp://$ftpHost"
 $remoteBase = $remotePath
+if ($RemoteSubdir -and $RemoteSubdir.Trim() -ne "") {
+  $remoteBase = Join-FtpPath $remoteBase $RemoteSubdir.Trim()
+}
 Ensure-FtpDirectory ("$baseUrl$remoteBase")
 
 foreach ($f in $files) {

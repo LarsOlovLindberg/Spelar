@@ -1,0 +1,16 @@
+<h2>Data – Pipelines</h2>
+<p>Beskriv flödet: ingest → clean → features → backtest → export (CSV/JSON) → portal.</p>
+
+<pre>
+/web/data/
+	backtest_resultat.json
+	edge_signals_live.csv
+	executed_trades.csv
+	live_status.json
+</pre>
+
+<h3>Tips</h3>
+<ul>
+	<li>Exportera alltid med <span class="mono">commit hash</span> + datum i filnamn (och/eller i JSON-fält).</li>
+	<li>Ha en “latest”-fil som portalen läser (som ovan), plus arkivfiler vid behov.</li>
+</ul>
