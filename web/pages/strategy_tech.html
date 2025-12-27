@@ -1,0 +1,60 @@
+<h2>Teknisk översikt (avancerat)</h2>
+
+<p>Här finns den tekniska helhetsbilden på en nivå som går att läsa utan att gräva i kod.</p>
+
+<div class="grid">
+  <div class="card">
+    <h4>Datakällor</h4>
+    <ul>
+      <li>Spotmarknad (snabb referens)</li>
+      <li>Orderbok (likviditet och prisnivåer)</li>
+      <li>Prissättning i den långsammare marknaden</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>Lead–lag på hög nivå</h4>
+    <ul>
+      <li>En marknad fungerar som “ledare”</li>
+      <li>Den andra marknaden släpar efter</li>
+      <li>Systemet agerar endast när edge är tydlig</li>
+    </ul>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h4>Orderbok-anpassad position sizing</h4>
+    <p class="muted">Maxstorlek per trade begränsas av vad som faktiskt går att handla utan att påverka priset för mycket.</p>
+  </div>
+  <div class="card">
+    <h4>Snapshot-baserad loggning</h4>
+    <p class="muted">Portalen visar uppdaterade snapshots (CSV/JSON) för att göra beteendet granskbart i efterhand.</p>
+  </div>
+</div>
+
+<details>
+  <summary>Visa tekniska detaljer</summary>
+  <div class="grid">
+    <div class="card" style="grid-column: span 12;">
+      <h4>Vad som sparas som snapshots</h4>
+      <p class="muted">Exempel på filer som portalen kan visa:</p>
+      <ul>
+        <li><span class="mono">live_status.json</span> – systemstatus och senaste loop</li>
+        <li><span class="mono">edge_signals_live.csv</span> – edge-observationer över tid</li>
+        <li><span class="mono">pm_paper_portfolio.json</span> – paper-saldo och sammanfattning</li>
+        <li><span class="mono">pm_paper_positions.csv</span> / <span class="mono">pm_paper_trades.csv</span> – positioner och trades (paper)</li>
+      </ul>
+    </div>
+  </div>
+</details>
+
+<div class="grid">
+  <div class="card" style="grid-column: span 12;">
+    <h4>Gå vidare</h4>
+    <p class="muted">Vill du se hur det ser ut just nu? Öppna data-sidan med exempel och live-snapshots.</p>
+    <div class="actions" style="justify-content:flex-start;">
+      <a class="btn" href="#/data">Data & exempel</a>
+      <a class="btn" href="#/start">Till Start</a>
+    </div>
+  </div>
+</div>

@@ -62,6 +62,30 @@ Scriptet laddar upp innehållet i `web/` till `remote_path`.
 
 Notera: UI-ändringar (`web/index.html`, `web/pages/*`) kräver full deploy av `web/` för att synas på sajten.
 
+## Lead–lag drift (Kraken spot → PM CLOB)
+
+Agenten kan köras i två edge-lägen via `STRATEGY_MODE`:
+- `lead_lag` (default): Kraken spot leder, Polymarket (CLOB) släpar.
+- `fair_model`: pm_price vs fair_p (Deribit/Kraken futures) – äldre logik.
+
+### Viktiga env-var (lead_lag)
+- `STRATEGY_MODE=lead_lag`
+- `MARKET_MAP_PATH=/etc/spelar_eu/market_map.json`
+- `KRAKEN_SPOT_PAIR=XBTUSD`
+- Trösklar/timing: `LEAD_LAG_LOOKBACK_POINTS`, `LEAD_LAG_SPOT_MOVE_MIN_PCT`, `LEAD_LAG_EDGE_MIN_PCT`, `LEAD_LAG_EDGE_EXIT_PCT`, `LEAD_LAG_MAX_HOLD_SECS`, `LEAD_LAG_PM_STOP_PCT`
+- Pris-guard: `LEAD_LAG_AVOID_PRICE_ABOVE`, `LEAD_LAG_AVOID_PRICE_BELOW`
+- Orderbok-sizing: `LEAD_LAG_ENABLE_ORDERBOOK_SIZING`, `LEAD_LAG_SLIPPAGE_CAP`, `LEAD_LAG_MAX_FRACTION_OF_BAND_LIQUIDITY`, `LEAD_LAG_HARD_CAP_USDC`
+- Freshness gate: `FRESHNESS_MAX_AGE_SECS` (om inputs är äldre än detta skippar agenten entry/exit)
+
+### Stabilitet
+- Agenten försöker alltid skriva `live_status.json` även om en tick kraschar.
+- Vid upprepade fel kör agenten enkel exponentiell backoff (sleep ökar upp till max ~5 min) för att undvika att spamma endpoints/loggar.
+
+### Snabb felsökning (utan att gissa)
+- Kolla `live_status.json` + `sources_health.json` först (ser du errors?)
+- Om “inga trades”: öppna `pm_paper_candidates.csv` och läs `decision/reason` (vanligt: warmup, stale_or_warmup, avoid_price_zone, trösklar för höga)
+- Verifiera att `edge_signals_live.csv` uppdateras och att `pm_paper_portfolio.json` ålder sjunker på spelar.eu.
+
 ## Lokal test
 
 ```powershell

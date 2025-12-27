@@ -76,6 +76,9 @@ function Resolve-RemoteHostSpec([string]$HostName, [string]$SshUser) {
 }
 
 function Invoke-SyncOnce {
+  # Ensure per-run state (important in -Watch mode)
+  $failed.Clear()
+
   $remoteHost = Resolve-RemoteHostSpec -HostName $HostName -SshUser $SshUser
   $syncedCount = 0
   $includeForDeploy = New-Object System.Collections.Generic.List[string]
@@ -141,6 +144,9 @@ function Invoke-SyncOnce {
       Write-Warning $msg
       Write-Log ("scp failed exit=${LASTEXITCODE}: $msg")
       $failed.Add($remoteFull) | Out-Null
+
+      # Prevent a handled scp failure from leaking out as the script process exit code.
+      $global:LASTEXITCODE = 0
       continue
     }
 
@@ -189,6 +195,14 @@ function Invoke-SyncOnce {
   }
 
   Write-Log ("Sync done: syncedCount=$syncedCount failedCount=" + $failed.Count)
+
+  # If we successfully synced at least one file, we consider the run successful unless -Strict.
+  # PowerShell will otherwise often exit with the last native command's code (scp), even if we handled it.
+  if (-not $Strict) {
+    if ($syncedCount -gt 0) {
+      $global:LASTEXITCODE = 0
+    }
+  }
 }
 
 if ($Watch) {

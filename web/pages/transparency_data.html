@@ -1,0 +1,59 @@
+<h2>Data & exempel</h2>
+
+<p class="muted">Syftet är transparens: följ vad systemet gjorde och varför, via snapshots (CSV/JSON).</p>
+
+<h3>Snabböversikt</h3>
+<p class="muted">Sammanfattning av status + paper-läget just nu.</p>
+
+<div data-live-status="live_status.json"></div>
+
+<div data-paper-portfolio="pm_paper_portfolio.json"></div>
+
+<h3>Positioner och trades</h3>
+<div class="grid">
+  <div class="card" style="grid-column: span 8;">
+    <h4>Senaste trades (paper)</h4>
+    <p class="muted">Historik över avslutade/öppnade trades.</p>
+    <div data-csv="pm_paper_trades.csv" data-max-rows="50"></div>
+  </div>
+  <div class="card" style="grid-column: span 4;">
+    <h4>Öppna positioner (paper)</h4>
+    <p class="muted">Visar vad som är öppet just nu.</p>
+    <div data-csv="pm_paper_positions.csv" data-max-rows="50"></div>
+  </div>
+</div>
+
+<h3>Exempel på edge-observationer</h3>
+<div class="grid">
+  <div class="card" style="grid-column: span 12;">
+    <p class="muted">Det här är en tabell med senaste observationerna som ligger till grund för beslut.</p>
+    <div data-csv="edge_signals_live.csv" data-max-rows="50"></div>
+  </div>
+</div>
+
+<h3>Varför det blev (eller inte blev) en trade</h3>
+<div class="grid">
+  <div class="card" style="grid-column: span 12;">
+    <p class="muted">Den här tabellen är till för att göra beslutet granskbart. Om systemet avstår handel brukar det finnas en tydlig orsak (t.ex. låg likviditet eller att marknaderna redan är synkade).</p>
+    <div data-csv="pm_paper_candidates.csv" data-max-rows="80"></div>
+  </div>
+</div>
+
+<h3>Vad du ser här</h3>
+<div class="grid">
+  <div class="card" style="grid-column: span 12;">
+    <p>Portalen visar <strong>snapshots</strong> – små ögonblicksbilder som VPS-agenten skriver ut (JSON/CSV). De beskriver läget just nu: status, edge-observationer och vad paper-systemet gjorde.</p>
+    <p class="muted">Praktiskt: varje block visar filnamn + senaste uppdateringstid (UTC) + ålder.</p>
+
+    <h4>Hur tolkar man filerna?</h4>
+    <ul>
+      <li><span class="mono">live_status.json</span> – sammanfattning: trading mode (paper/live), parametrar och senaste timestamp.</li>
+      <li><span class="mono">lead_lag_health.json</span> – rullande “hälsa” för lead–lag: percentiler för edge/net-edge/spread/lag/likviditet + counts för reasons/status + latens.</li>
+      <li><span class="mono">edge_signals_live.csv</span> – senaste edge-observationer (signalnivå), som ligger till grund för beslut.</li>
+      <li><span class="mono">pm_paper_portfolio.json</span> – paper-portfölj: cash, equity och antal öppna positioner.</li>
+      <li><span class="mono">pm_paper_positions.csv</span> – öppna paper-positioner per marknad/token.</li>
+      <li><span class="mono">pm_paper_trades.csv</span> – senaste paper-trades (fyllda/skippade + orsak).</li>
+      <li><span class="mono">pm_paper_candidates.csv</span> – varför det blev (eller inte blev) en trade för kandidaterna i tick: “reason” är nyckeln.</li>
+    </ul>
+  </div>
+</div>

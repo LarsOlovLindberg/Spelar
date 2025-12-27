@@ -3,23 +3,25 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>spelar.eu – Trading Portal</title>
-  <meta name="description" content="Portal för Polymarket↔Kraken edge och automatiska satsningar/trades." />
+  <title>spelar.eu</title>
+  <meta name="description" content="Systematisk, riskkontrollerad handel baserad på tillfälliga marknadsskillnader." />
 
   <style>
     :root{
-      --bg:#0b0f17;
-      --panel:#0f1624;
-      --panel2:#111b2d;
-      --text:#e6edf7;
-      --muted:#a9b6cc;
-      --border:rgba(255,255,255,.08);
-      --accent:#6aa7ff;
-      --good:#58d68d;
-      --bad:#ff6a7a;
-      --warn:#ffd166;
-      --shadow: 0 10px 30px rgba(0,0,0,.35);
-      --radius: 14px;
+      /* Light, airy theme (kept as primitives via CSS variables) */
+      --bg:#f3f4f6;
+      --panel:#ffffff;
+      --panel2:#f9fafb;
+      --text:#111827;
+      --muted:#6b7280;
+      --border:rgba(17,24,39,.10);
+      --accent:#3b82f6;
+      --good:#16a34a;
+      --bad:#ef4444;
+      --warn:#f59e0b;
+      --shadow: 0 8px 24px rgba(17,24,39,.08);
+      --shadowSoft: 0 4px 6px -1px rgba(17,24,39,.08), 0 2px 4px -2px rgba(17,24,39,.06);
+      --radius: 16px;
       --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
@@ -29,10 +31,11 @@
     body{
       margin:0;
       font-family:var(--font);
-      font-size:22px;
-      background: radial-gradient(1200px 800px at 20% 0%, rgba(106,167,255,.18), transparent 45%),
-                  radial-gradient(1200px 800px at 80% 20%, rgba(88,214,141,.10), transparent 45%),
-                  var(--bg);
+      font-size:18px;
+      background:
+        radial-gradient(1200px 800px at 20% 0%, rgba(59,130,246,.12), transparent 52%),
+        radial-gradient(1200px 800px at 80% 20%, rgba(22,163,74,.10), transparent 52%),
+        var(--bg);
       color:var(--text);
     }
 
@@ -48,8 +51,8 @@
       top:0;
       height:100vh;
       padding:18px 14px;
-      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-      border-right:1px solid var(--border);
+      background: transparent;
+      border-right:0;
       overflow:auto;
     }
 
@@ -59,16 +62,16 @@
       gap:10px;
       padding:12px 12px 14px 12px;
       border:1px solid var(--border);
-      background: rgba(15,22,36,.65);
+      background: var(--panel);
       border-radius: var(--radius);
-      box-shadow: var(--shadow);
+      box-shadow: var(--shadowSoft);
       margin-bottom:12px;
     }
     .logo{
       width:36px;height:36px;border-radius:12px;
-      background: linear-gradient(135deg, rgba(106,167,255,.9), rgba(88,214,141,.85));
+      background: linear-gradient(135deg, rgba(59,130,246,.95), rgba(22,163,74,.85));
       display:grid;place-items:center;
-      color:#0b0f17;font-weight:800;
+      color:#ffffff;font-weight:800;
       letter-spacing:.5px;
       user-select:none;
     }
@@ -92,8 +95,9 @@
       align-items:center;
       padding:10px 10px;
       border:1px solid var(--border);
-      background: rgba(15,22,36,.45);
+      background: var(--panel);
       border-radius: 12px;
+      box-shadow: var(--shadowSoft);
     }
     .search input{
       width:100%;
@@ -112,10 +116,11 @@
     }
 
     .nav-section{
-      border:1px solid var(--border);
-      background: rgba(15,22,36,.35);
+      border:0;
+      background: var(--panel);
       border-radius: var(--radius);
       overflow:hidden;
+      box-shadow: var(--shadowSoft);
     }
     .nav-section .sec-title{
       padding:10px 12px;
@@ -124,7 +129,7 @@
       letter-spacing:.08em;
       text-transform:uppercase;
       border-bottom:1px solid var(--border);
-      background: rgba(255,255,255,.02);
+      background: var(--panel2);
     }
     .nav-items{padding:8px}
     .nav a{
@@ -136,18 +141,18 @@
       margin:2px 0;
       text-decoration:none;
       color:var(--text);
-      border-radius:12px;
+      border-radius:999px;
       border:1px solid transparent;
       font-size:18px;
     }
     .nav a:hover{
-      background: rgba(106,167,255,.10);
-      border-color: rgba(106,167,255,.22);
+      background: rgba(59,130,246,.10);
+      border-color: rgba(59,130,246,.22);
     }
     .nav a.active{
-      background: rgba(106,167,255,.16);
-      border-color: rgba(106,167,255,.35);
-      box-shadow: 0 8px 22px rgba(106,167,255,.08);
+      background: rgba(59,130,246,.14);
+      border-color: rgba(59,130,246,.28);
+      box-shadow: 0 8px 22px rgba(59,130,246,.10);
     }
     .badge{
       font-size:14px;
@@ -167,13 +172,31 @@
       font-size:15px;
       border:1px dashed var(--border);
       border-radius: var(--radius);
-      background: rgba(15,22,36,.20);
+      background: var(--panel2);
     }
     .footer code{font-family:var(--mono);color:rgba(230,237,247,.85)}
     .footer .row{display:flex;justify-content:space-between;gap:10px;margin-top:6px}
     .dot{width:8px;height:8px;border-radius:99px;background:var(--warn);display:inline-block}
     .dot.ok{background:var(--good)}
+    .dot.warn{background:var(--warn)}
     .dot.bad{background:var(--bad)}
+
+    .statusBadge{
+      display:inline-flex;
+      align-items:center;
+      font-family:var(--mono);
+      font-size:13px;
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background: var(--panel);
+      color: var(--muted);
+      user-select:none;
+      white-space:nowrap;
+    }
+    .statusBadge.ok{color:var(--good)}
+    .statusBadge.warn{color:var(--warn)}
+    .statusBadge.bad{color:var(--bad)}
 
     /* Main */
     .main{
@@ -187,10 +210,10 @@
       justify-content:space-between;
       gap:12px;
       padding:14px 14px;
-      border:1px solid var(--border);
+      border:0;
       border-radius: var(--radius);
-      background: rgba(15,22,36,.55);
-      box-shadow: var(--shadow);
+      background: var(--panel);
+      box-shadow: var(--shadowSoft);
       margin-bottom:14px;
     }
 
@@ -239,11 +262,11 @@
     }
 
     .content{
-      border:1px solid var(--border);
+      border:0;
       border-radius: var(--radius);
-      background: rgba(15,22,36,.35);
-      box-shadow: var(--shadow);
-      padding:16px;
+      background: transparent;
+      box-shadow: none;
+      padding:8px;
       min-height: calc(100vh - 18px - 14px - 18px - 100px);
     }
 
@@ -253,10 +276,10 @@
       grid-template-columns: 1.2fr .8fr;
       gap:12px;
       padding:14px;
-      border:1px solid var(--border);
+      border:0;
       border-radius: var(--radius);
-      background: rgba(15,22,36,.45);
-      box-shadow: var(--shadow);
+      background: var(--panel);
+      box-shadow: var(--shadowSoft);
       margin-bottom:14px;
     }
     .opsbar h3{
@@ -296,7 +319,7 @@
       padding:8px 10px;
       border:1px solid var(--border);
       border-radius:12px;
-      background: rgba(255,255,255,.02);
+      background: var(--panel2);
       margin:8px 0;
     }
     .fileRow .left{display:flex;align-items:center;gap:10px;min-width:0}
@@ -304,8 +327,8 @@
     .fileRow .meta{font-family:var(--mono);font-size:15px;color:var(--muted);white-space:nowrap}
     .fileRow .name{font-family:var(--mono);font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .notice{
-      border:1px solid rgba(106,167,255,.25);
-      background: rgba(106,167,255,.08);
+      border:1px solid rgba(59,130,246,.20);
+      background: rgba(59,130,246,.08);
       border-radius: 12px;
       padding:12px 12px;
       margin-bottom:14px;
@@ -315,10 +338,10 @@
     .notice .mono{color:rgba(230,237,247,.92)}
 
     /* Generic content styling */
-    h2{margin:0 0 10px 0;font-size:30px}
-    h3{margin:18px 0 8px 0;font-size:22px;color:rgba(230,237,247,.92)}
-    p{margin:8px 0;color:rgba(230,237,247,.92);line-height:1.7}
-    ul{margin:8px 0 8px 18px;color:rgba(230,237,247,.92)}
+    h2{margin:0 0 10px 0;font-size:30px;color:var(--text)}
+    h3{margin:18px 0 8px 0;font-size:22px;color:var(--text)}
+    p{margin:8px 0;color:var(--text);line-height:1.7}
+    ul{margin:8px 0 8px 18px;color:var(--text)}
     li{margin:6px 0}
     code, pre{font-family:var(--mono)}
     pre{
@@ -326,24 +349,25 @@
       padding:12px;
       border-radius: 12px;
       border:1px solid var(--border);
-      background: rgba(0,0,0,.25);
+      background: var(--panel2);
       overflow:auto;
     }
 
     .grid{
       display:grid;
       grid-template-columns: repeat(12, 1fr);
-      gap:12px;
+      gap:16px;
       margin-top:12px;
     }
     .card{
       grid-column: span 6;
-      border:1px solid var(--border);
+      border:0;
       border-radius: var(--radius);
-      background: rgba(15,22,36,.40);
-      padding:12px;
+      background: var(--panel);
+      padding:22px;
+      box-shadow: var(--shadowSoft);
     }
-    .card h4{margin:0 0 8px 0;font-size:18px;color:rgba(230,237,247,.95)}
+    .card h4{margin:0 0 8px 0;font-size:18px;color:var(--text)}
     .kv{
       display:grid;
       grid-template-columns: 1fr auto;
@@ -360,22 +384,129 @@
       padding:6px 10px;
       border-radius: 999px;
       border:1px solid var(--border);
-      background: rgba(255,255,255,.03);
-      color:rgba(230,237,247,.92);
+      background: var(--panel2);
+      color:var(--text);
     }
 
+    /* Edge calculator */
+    .edgecalc{
+      margin-top:10px;
+    }
+    .edgecalc .row{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:flex-start;
+      margin-bottom:10px;
+    }
+    .edgecalc .title{font-size:16px;margin:0;color:var(--text)}
+    .edgecalc .sub{font-size:14px;margin:0;color:var(--muted)}
+    .edgecalc .net{
+      text-align:right;
+      min-width:140px;
+    }
+    .edgecalc .net .label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+    .edgecalc .net .value{font-size:34px;font-weight:900;line-height:1.05}
+    .edgebar{
+      height:34px;
+      border-radius:999px;
+      background: var(--panel2);
+      border:1px solid var(--border);
+      display:flex;
+      overflow:hidden;
+    }
+    .edgebar .seg{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#ffffff;
+      font-size:13px;
+      font-weight:800;
+      padding:0 10px;
+      white-space:nowrap;
+      min-width:0;
+    }
+    .edgebar .seg span{overflow:hidden;text-overflow:ellipsis}
+    .edgebar .spread{background: var(--bad)}
+    .edgebar .fee{background: var(--warn)}
+    .edgebar .netpos{background: var(--good)}
+    .edgebar .netneg{background: rgba(107,114,128,.45)}
+    .edgecalc .foot{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      font-size:14px;
+      color:var(--muted);
+      border-top:1px solid var(--border);
+      padding-top:10px;
+      margin-top:12px;
+    }
+    .edgecalc .foot strong{color:var(--text)}
+
+    /* Lag/latency gauges */
+    .gauges{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+    .gauge{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      border:1px solid var(--border);
+      background: var(--panel2);
+      border-radius: 14px;
+      padding:12px;
+    }
+    .ring{
+      width:44px;height:44px;border-radius:999px;
+      border:5px solid rgba(107,114,128,.35);
+      flex:0 0 auto;
+    }
+    .ring.good{border-color: rgba(22,163,74,.85); background: rgba(22,163,74,.10)}
+    .ring.bad{border-color: rgba(239,68,68,.85); background: rgba(239,68,68,.10)}
+    .ring.warn{border-color: rgba(245,158,11,.85); background: rgba(245,158,11,.10)}
+    .gauge .name{font-size:14px;color:var(--muted);margin:0}
+    .gauge .val{font-size:22px;font-weight:900;margin:2px 0 0 0;color:var(--text)}
+    .gauge .hint{font-size:13px;color:var(--muted);margin:0}
+
     /* Tables */
-    table{width:100%;border-collapse:collapse;margin-top:10px}
+    .tablewrap{
+      max-width:100%;
+      overflow-x:auto;
+      overflow-y:auto;
+      -webkit-overflow-scrolling:touch;
+      background: var(--panel);
+      border-radius: var(--radius);
+      box-shadow: var(--shadowSoft);
+      padding: 8px;
+      margin-top: 10px;
+    }
+    table{
+      width:max-content;
+      min-width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      margin-top:0;
+    }
     th,td{
       border-bottom:1px solid var(--border);
-      padding:9px 8px;
+      padding:10px 10px;
       text-align:left;
       font-size:17px;
+      white-space:nowrap;
     }
-    th{color:var(--muted);font-weight:600}
-    tbody tr:hover{background: rgba(106,167,255,.06)}
+    th{
+      color:var(--muted);
+      font-weight:700;
+      background: var(--panel2);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    tbody tr:nth-child(even){background: rgba(17,24,39,.02)}
+    tbody tr:hover{background: rgba(59,130,246,.08)}
     .muted{color:var(--muted)}
     .mono{font-family:var(--mono)}
+    .num.good{color:var(--good)}
+    .num.bad{color:var(--bad)}
+    .num.warn{color:var(--warn)}
 
     /* Mobile */
     @media (max-width: 980px){
@@ -396,27 +527,11 @@
         <div class="logo">S</div>
         <div>
           <h1>spelar.eu</h1>
-          <small id="buildInfo">pm ↔ kraken · edge → auto</small>
+          <small id="buildInfo">Systematisk · tidsbegränsad edge · riskkontrollerad</small>
         </div>
-      </div>
-
-      <div class="search" title="Sök i meny">
-        <span class="muted">⌕</span>
-        <input id="navSearch" type="search" placeholder="Sök flik..." />
       </div>
 
       <nav class="nav" id="nav"></nav>
-
-      <div class="footer">
-        <div class="row">
-          <div><span class="dot ok" id="dotStatus"></span> <span id="statusText">Ready</span></div>
-          <div class="mono" id="clock">--:--:--</div>
-        </div>
-        <div class="row">
-          <div class="muted">Data: <code>/web/data/</code></div>
-          <div class="muted">Pages: <code>/web/pages/</code></div>
-        </div>
-      </div>
     </aside>
 
     <main class="main">
@@ -425,26 +540,18 @@
           <div class="crumbs" id="crumbs">Start</div>
           <h2 class="title" id="pageTitle">Översikt</h2>
         </div>
-        <div class="actions">
-          <button id="btnReload" type="button">↻ Ladda om</button>
-        </div>
       </div>
 
-      <section class="opsbar" id="opsBar" aria-live="polite">
+      <section class="opsbar" id="opsBar" aria-live="polite" style="display:none">
         <div>
-          <h3>Live-check: vad du ser & varför</h3>
-          <p><strong>Inga siffror är hårdkodade i portalen.</strong> Sidorna visar snapshots från <span class="mono">/web/data/</span> (CSV/JSON).</p>
-          <p>Om “LIVE” blir gammalt eller rött betyder det oftast att kedjan inte uppdaterar filer i tid.</p>
-          <ul class="opssteps">
-            <li><span class="mono">VPS</span> skriver snapshots (CSV/JSON).</li>
-            <li><span class="mono">Sync</span> hämtar till <span class="mono">web/data</span>.</li>
-            <li><span class="mono">FTP</span> laddar upp till webhotellet.</li>
-          </ul>
-          <div class="liveSummary" id="opsSummary">Väljer sida…</div>
+          <h3>Uppdateringskontroll</h3>
+          <p><strong>Det du ser här bygger på snapshots.</strong> Om en fil är gammal betyder det att den inte har uppdaterats nyligen.</p>
+          <p class="muted">Tips: klicka fil-länkarna för att se exakt innehåll.</p>
+          <div class="liveSummary" id="opsSummary">Laddar status…</div>
         </div>
         <div class="opsright">
-          <h3>Datakällor för sidan</h3>
-          <p class="muted">Filerna nedan är de som den här sidan förväntar sig (och som LIVE-status baseras på).</p>
+          <h3>Filer kopplade till sidan</h3>
+          <p class="muted">Portalen använder dessa filer för den här vyn.</p>
           <div class="filelist" id="opsFiles"></div>
         </div>
       </section>
@@ -459,29 +566,32 @@
     // ----------------------------
     // ROUTES / NAV STRUCTURE
     // ----------------------------
-    // Focus: Polymarket ↔ Kraken edge + automated execution.
     const NAV = [
       {
-        section: "Polymarket ↔ Kraken",
+        section: "Start",
         items: [
-          { id:"start-overview", label:"Översikt", route:"#/start/overview", page:"start_overview.html", badge:"home", dataFiles:["pm_paper_portfolio.json","pm_paper_positions.csv","pm_paper_trades.csv","edge_signals_live.csv"] },
-          { id:"ops-todo", label:"Att göra (go-live)", route:"#/ops/todo", page:"todo_go_live.html", badge:"todo", dataFiles:["sources_health.json","pm_open_orders.json","kraken_futures_private.json","pm_orders.csv"] },
-          { id:"live-status", label:"Live status & felsökning", route:"#/live/status", page:"live_status.html", badge:"live", dataFiles:["live_status.json","executed_trades.csv"] },
-          { id:"live-readiness", label:"Live readiness (go/no-go)", route:"#/live/readiness", page:"live_readiness.html", badge:"ready", dataFiles:["live_status.json","sources_health.json","deribit_options_public.json","polymarket_status.json","polymarket_clob_public.json","pm_open_orders.json","pm_scanner_log.csv","edge_signals_live.csv","pm_hedge_rules.json","pm_orders.csv","pm_paper_portfolio.json","pm_paper_positions.csv","pm_paper_trades.csv","pm_paper_candidates.csv","kraken_futures_public.json","kraken_futures_private.json","kraken_futures_signals.csv","kraken_futures_fills.csv","executed_trades.csv"] },
-          { id:"pm-status", label:"Polymarket status", route:"#/pm/status", page:"polymarket.html", badge:"pm", dataFiles:["polymarket_status.json","pm_paper_portfolio.json","pm_paper_positions.csv","pm_paper_trades.csv","pm_paper_candidates.csv"] },
-          { id:"pm-scanner", label:"Market Scanner", route:"#/pm/scanner", page:"pm_scanner.html", badge:"scan", dataFiles:["pm_scanner_log.csv"] },
-          { id:"pm-edge", label:"Edge-rankning (live)", route:"#/pm/edge", page:"pm_edge.html", badge:"edge", dataFiles:["edge_signals_live.csv"] },
-          { id:"pm-hedge", label:"Hedge-plan (Kraken)", route:"#/pm/hedge", page:"pm_hedge.html", badge:"hedge", dataFiles:["pm_hedge_rules.json"] },
-          { id:"pm-stack", label:"Edge stack (översikt)", route:"#/pm/edge-stack", page:"project_edge_stack.html", badge:"stack", dataFiles:["edge_signals_live.csv","executed_trades.csv"] },
-          { id:"pm-auto", label:"Auto execution (pm → kraken)", route:"#/pm/auto", page:"project_pm_kraken.html", badge:"auto", dataFiles:["edge_signals_live.csv","executed_trades.csv"] },
-          { id:"pm-orders", label:"pm orders (pm_orders.csv)", route:"#/pm/execution", page:"pm_execution.html", badge:"orders", dataFiles:["pm_orders.csv"] },
-          { id:"kraken-fut", label:"Kraken futures (signals/fills)", route:"#/kraken/futures", page:"kraken_futures_edge.html", badge:"fut", dataFiles:["kraken_futures_signals.csv","kraken_futures_fills.csv"] },
-          { id:"pm-exec", label:"Execution log", route:"#/pm/execution-log", page:"live_execution_log.html", badge:"log", dataFiles:["executed_trades.csv"] }
+          { id:"start-home", label:"Startsida", route:"#/start", page:"start_home.html", badge:"start", dataFiles:[] }
+        ]
+      },
+      {
+        section: "Strategi & Teknik",
+        items: [
+          { id:"strategy-about", label:"2.1 Om strategin", route:"#/strategy/about", page:"strategy_about.html", badge:"2.1", dataFiles:[] },
+          { id:"strategy-flow", label:"2.2 Hur systemet tänker", route:"#/strategy/flow", page:"strategy_flow.html", badge:"2.2", dataFiles:[] },
+          { id:"strategy-risk", label:"2.3 Risk & begränsningar", route:"#/strategy/risk", page:"strategy_risk.html", badge:"2.3", dataFiles:[] },
+          { id:"strategy-tech", label:"2.4 Teknisk översikt", route:"#/strategy/tech", page:"strategy_tech.html", badge:"2.4", dataFiles:[] }
+        ]
+      },
+      {
+        section: "Transparens / Data",
+        items: [
+          { id:"transparency-data", label:"Data & exempel", route:"#/data", page:"transparency_data.html", badge:"data", showNotice:false, showOps:true,
+            dataFiles:["live_status.json","polymarket_status.json","pm_paper_portfolio.json","pm_paper_positions.csv","pm_paper_trades.csv","edge_signals_live.csv","pm_paper_candidates.csv"] }
         ]
       }
     ];
 
-    const DEFAULT_ROUTE = "#/start/overview";
+    const DEFAULT_ROUTE = "#/start";
 
     // ----------------------------
     // DOM refs
@@ -490,28 +600,17 @@
     const contentEl = document.getElementById("content");
     const crumbsEl = document.getElementById("crumbs");
     const titleEl = document.getElementById("pageTitle");
-    const navSearchEl = document.getElementById("navSearch");
-    const btnReload = document.getElementById("btnReload");
-    const clockEl = document.getElementById("clock");
-    const statusTextEl = document.getElementById("statusText");
-    const dotEl = document.getElementById("dotStatus");
     const opsSummaryEl = document.getElementById("opsSummary");
     const opsFilesEl = document.getElementById("opsFiles");
+    const opsBarEl = document.getElementById("opsBar");
 
     // ----------------------------
     // Build sidebar
     // ----------------------------
-    function buildNav(filterText=""){
+    function buildNav(){
       navEl.innerHTML = "";
-      const q = (filterText || "").trim().toLowerCase();
 
       for (const sec of NAV){
-        const visibleItems = sec.items.filter(it => {
-          if (!q) return true;
-          return (it.label.toLowerCase().includes(q) || it.badge.toLowerCase().includes(q) || it.route.toLowerCase().includes(q));
-        });
-
-        if (q && visibleItems.length === 0) continue;
 
         const wrap = document.createElement("div");
         wrap.className = "nav-section";
@@ -524,7 +623,7 @@
         const itemsEl = document.createElement("div");
         itemsEl.className = "nav-items";
 
-        for (const it of visibleItems){
+        for (const it of sec.items){
           const a = document.createElement("a");
           a.href = it.route;
           a.dataset.route = it.route;
@@ -573,16 +672,11 @@
       return await r.text();
     }
 
-    function setStatus(kind, text){
-      dotEl.className = "dot" + (kind ? ` ${kind}` : "");
-      statusTextEl.textContent = text;
-    }
-
     function fileStatusKind(ageMs, ok){
       if (!ok) return "bad";
-      if (!Number.isFinite(ageMs)) return "ok";
+      if (!Number.isFinite(ageMs)) return "warn";
       if (ageMs <= 5*60*1000) return "ok";
-      if (ageMs <= 30*60*1000) return "";
+      if (ageMs <= 30*60*1000) return "warn";
       return "bad";
     }
 
@@ -600,14 +694,25 @@
         const ageMs = (ok && Number.isFinite(r.lastModified)) ? Math.max(0, now - r.lastModified) : NaN;
         const age = ok ? (Number.isFinite(ageMs) ? formatAge(ageMs) : "? (saknar Last-Modified)") : "saknas/ej läsbar";
         const kind = fileStatusKind(ageMs, ok);
+        const statusLabel = !ok ? "Error" : (kind === "ok" ? "Live" : "Väntar");
+
+        const sizeText = (ok && Number.isFinite(r.sizeBytes)) ? formatBytes(r.sizeBytes) : "";
+        const meta = [age, sizeText].filter(Boolean).join(" · ");
+
         const href = `./data/${encodeURIComponent(file)}`;
+        const titleParts = [];
+        if (ok && Number.isFinite(r.lastModified)) titleParts.push(`Last-Modified: ${formatUtcTimestamp(r.lastModified)}`);
+        if (ok && Number.isFinite(r.sizeBytes)) titleParts.push(`Size: ${formatBytes(r.sizeBytes)}`);
+        titleParts.push(`Status: ${statusLabel}`);
+        const title = titleParts.join("\n");
         return `
           <div class="fileRow">
             <div class="left">
               <span class="dot ${kind}"></span>
+              <span class="statusBadge ${kind}">${escapeHtml(statusLabel)}</span>
               <a class="name" href="${href}" target="_blank" rel="noopener">${escapeHtml(file)}</a>
             </div>
-            <div class="meta">${escapeHtml(age)}</div>
+            <div class="meta" title="${escapeHtml(title)}">${escapeHtml(meta)}</div>
           </div>
         `;
       }).join("");
@@ -621,7 +726,7 @@
 
       return `
         <div class="notice">
-          <p><strong>Hur du verifierar att detta är live:</strong> klicka “Ladda om”, och kontrollera att filerna under uppdateras (ålder sjunker) och att innehållet matchar det du förväntar dig.</p>
+          <p><strong>Hur du verifierar att detta är uppdaterat:</strong> kontrollera att filerna under uppdateras (ålder sjunker) och att innehållet matchar det du förväntar dig.</p>
           ${files.length ? `<p class="muted" style="margin-top:8px">Den här sidan läser:</p><ul>${list}</ul>` : `<p class="muted">Den här sidan visar främst text/struktur och har inga kopplade datafiler.</p>`}
         </div>
       `;
@@ -630,11 +735,49 @@
     function formatAge(ms){
       if (!Number.isFinite(ms) || ms < 0) return "?";
       const s = Math.floor(ms / 1000);
-      if (s < 60) return `${s}s`;
+      if (s <= 0) return "just nu";
+      if (s < 60) return `${s} sek sedan`;
       const m = Math.floor(s / 60);
-      if (m < 60) return `${m}m`;
+      if (m < 60) return `${m} min sedan`;
       const h = Math.floor(m / 60);
-      return `${h}h${String(m % 60).padStart(2,"0")}m`;
+      if (h < 24){
+        const mm = m % 60;
+        return mm ? `${h} h ${mm} min sedan` : `${h} h sedan`;
+      }
+      const d = Math.floor(h / 24);
+      return d === 1 ? `1 dygn sedan` : `${d} dygn sedan`;
+    }
+
+    function formatBytes(bytes){
+      if (!Number.isFinite(bytes) || bytes < 0) return "";
+      if (bytes < 1024) return `${Math.round(bytes)} B`;
+      const kb = bytes / 1024;
+      if (kb < 1024) return `${kb.toFixed(1)} KB`;
+      const mb = kb / 1024;
+      return `${mb.toFixed(1)} MB`;
+    }
+
+    function parseTimestampMs(s){
+      if (!s) return NaN;
+      const t = Date.parse(String(s));
+      return Number.isFinite(t) ? t : NaN;
+    }
+
+    function formatUtcTimestamp(ms){
+      if (!Number.isFinite(ms)) return "?";
+      try{
+        return new Date(ms).toISOString().slice(0,19).replace("T"," ") + " UTC";
+      }catch(_e){
+        return "?";
+      }
+    }
+
+    function renderBlockMetaLine(file, lastModifiedMs){
+      const now = Date.now();
+      const ageMs = Number.isFinite(lastModifiedMs) ? Math.max(0, now - lastModifiedMs) : NaN;
+      const age = Number.isFinite(ageMs) ? formatAge(ageMs) : "?";
+      const ts = formatUtcTimestamp(lastModifiedMs);
+      return `<p class="muted" style="margin:8px 0 0 0">Fil: <span class="mono">${escapeHtml(String(file || ""))}</span> · Senast uppdaterad: <span class="mono">${escapeHtml(age)}</span> <span class="muted mono">(${escapeHtml(ts)})</span></p>`;
     }
 
     async function getLastModifiedForDataFile(file){
@@ -644,26 +787,29 @@
         const r = await fetch(url, { method: "HEAD", cache: "no-store" });
         if (r.ok){
           const lm = r.headers.get("Last-Modified");
-          if (lm) return { ok:true, file, lastModified: new Date(lm).getTime() };
+          const cl = r.headers.get("Content-Length");
+          const sizeBytes = cl ? Number(cl) : NaN;
+          if (lm) return { ok:true, file, lastModified: new Date(lm).getTime(), sizeBytes };
           // Some servers omit Last-Modified; treat as unknown.
-          return { ok:true, file, lastModified: NaN };
+          return { ok:true, file, lastModified: NaN, sizeBytes };
         }
       }catch(_e){ /* ignore */ }
 
       try{
         const r2 = await fetch(url, { cache: "no-store" });
-        if (!r2.ok) return { ok:false, file, lastModified: NaN };
+        if (!r2.ok) return { ok:false, file, lastModified: NaN, sizeBytes: NaN };
         const lm2 = r2.headers.get("Last-Modified");
-        return { ok:true, file, lastModified: lm2 ? new Date(lm2).getTime() : NaN };
+        const cl2 = r2.headers.get("Content-Length");
+        const sizeBytes2 = cl2 ? Number(cl2) : NaN;
+        return { ok:true, file, lastModified: lm2 ? new Date(lm2).getTime() : NaN, sizeBytes: sizeBytes2 };
       }catch(_e2){
-        return { ok:false, file, lastModified: NaN };
+        return { ok:false, file, lastModified: NaN, sizeBytes: NaN };
       }
     }
 
     async function updateLiveStatusForRoute(route){
       const files = (route && Array.isArray(route.dataFiles)) ? route.dataFiles : [];
       if (files.length === 0){
-        setStatus("ok", "Ready · LIVE: n/a");
         opsSummaryEl.textContent = "Den här sidan har inga datafiler kopplade.";
         opsFilesEl.innerHTML = renderOpsFiles(files, []);
         return;
@@ -672,8 +818,7 @@
       const results = await Promise.all(files.map(getLastModifiedForDataFile));
       const ok = results.some(r => r.ok);
       if (!ok){
-        setStatus("bad", `Ready · LIVE: kunde inte läsa data (${files[0]})`);
-        opsSummaryEl.textContent = "LIVE-fel: kunde inte läsa någon av sidans datafiler. Kontrollera att FTP/sync har laddat upp /web/data.";
+        opsSummaryEl.textContent = "Kunde inte läsa någon av sidans datafiler. Kontrollera att filerna finns uppladdade.";
         opsFilesEl.innerHTML = renderOpsFiles(files, results);
         return;
       }
@@ -688,19 +833,14 @@
       }
 
       if (!best){
-        // No Last-Modified available; still indicate data is fetched from /web/data.
-        setStatus("ok", `Ready · LIVE: ./data/${files[0]}`);
-        opsSummaryEl.innerHTML = `LIVE: data laddas från <span class="mono">/web/data</span>, men servern skickar ingen <span class="mono">Last-Modified</span>. Klicka filerna för att verifiera innehåll.`;
+        // No Last-Modified available; still allow verification via direct file links.
+        opsSummaryEl.innerHTML = `Data går att hämta, men servern skickar ingen <span class="mono">Last-Modified</span>. Klicka filerna för att verifiera innehåll.`;
         opsFilesEl.innerHTML = renderOpsFiles(files, results);
         return;
       }
 
       const ageMs = Math.max(0, now - best.lastModified);
       const age = formatAge(ageMs);
-
-      // Thresholds: OK under 5 min, warn under 30 min, bad otherwise.
-      const kind = ageMs <= 5*60*1000 ? "ok" : (ageMs <= 30*60*1000 ? "" : "bad");
-      setStatus(kind, `Ready · LIVE: ${age} (${best.file})`);
 
       opsSummaryEl.innerHTML = `Nyast uppdaterad fil: <span class="mono">${escapeHtml(best.file)}</span> · ålder <span class="mono">${escapeHtml(age)}</span>.`;
       opsFilesEl.innerHTML = renderOpsFiles(files, results);
@@ -717,22 +857,23 @@
 
       setActiveLink(route.route);
 
-      crumbsEl.textContent = `${route.section} / ${route.label}`;
+      crumbsEl.textContent = `${route.section}`;
       titleEl.textContent = route.label;
 
-      setStatus("", "Loading…");
+      const showOps = !!route.showOps;
+      opsBarEl.style.display = showOps ? "" : "none";
 
       try{
         const html = await loadPage(route.page);
-        contentEl.innerHTML = renderNotice(route) + html;
+        contentEl.innerHTML = (route.showNotice ? renderNotice(route) : "") + html;
 
         // Render CSV/JSON blocks placed inside pages
         await hydrateDataBlocks();
 
-        // Show clearly that displayed metrics are live snapshots from /web/data
-        await updateLiveStatusForRoute(route);
+        if (showOps){
+          await updateLiveStatusForRoute(route);
+        }
       }catch(e){
-        setStatus("bad", "Error");
         contentEl.innerHTML = `
           <h2>Kunde inte ladda sidan</h2>
           <p class="muted mono">${escapeHtml(String(e))}</p>
@@ -779,14 +920,69 @@
       return rows;
     }
 
+    function tryParseNumber(s){
+      if (typeof s === "number") return s;
+      if (s === null || s === undefined) return NaN;
+      const t = String(s).trim();
+      if (!t) return NaN;
+      const cleaned = t.endsWith("%") ? t.slice(0, -1) : t;
+      const n = Number(cleaned);
+      return Number.isFinite(n) ? n : NaN;
+    }
+
+    function numClass(n){
+      if (!Number.isFinite(n)) return "";
+      if (n > 0) return "num good";
+      if (n < 0) return "num bad";
+      return "num";
+    }
+
+    function humanizeReason(reason){
+      const r = String(reason || "").trim();
+      if (!r) return "";
+      const map = {
+        // lead-lag / edge_calculator_live.csv
+        "spot_move_too_small": "Move too small",
+        "low_edge": "Edge too low",
+        "net_edge_too_low": "Net edge too low",
+        "spread_too_high": "Spread too high",
+        "insufficient_liquidity": "Insufficient liquidity",
+        "throttled": "Throttled",
+        "lag_too_short": "Lag too short",
+        "warmup": "Warmup",
+        "stale_or_warmup": "Stale/Warmup",
+        "avoid_price_zone": "Price filtered",
+        "avoid_price_zone_executable": "Price filtered (executable)",
+        "hold": "Holding",
+        "enter": "Entered",
+        "edge_exit": "Exit (edge faded)",
+        "max_hold": "Exit (max hold)",
+        "stop": "Exit (stop)",
+      };
+      return map[r] || r;
+    }
+
     function renderTableFromRows(rows, maxRows=200){
       if (!rows || rows.length === 0) return `<p class="muted">Ingen data.</p>`;
       const head = rows[0];
       const body = rows.slice(1, maxRows + 1);
 
+      const headLower = head.map(h => String(h || "").toLowerCase());
+      const shouldColor = (hl) => hl.includes("pnl") || hl.includes("edge") || hl.includes("return") || hl.includes("roi");
+
       const th = head.map(h => `<th>${escapeHtml(h)}</th>`).join("");
       const tr = body.map(r => {
-        const tds = head.map((_, idx) => `<td class="mono">${escapeHtml(r[idx] ?? "")}</td>`).join("");
+        const tds = head.map((_, idx) => {
+          const v = r[idx] ?? "";
+          const hl = headLower[idx] || "";
+          let cls = "mono";
+          if (shouldColor(hl)){
+            const n = tryParseNumber(v);
+            const nc = numClass(n);
+            if (nc) cls += " " + nc;
+          }
+          return `<td class="${cls}">${escapeHtml(String(v))}</td>`;
+        }).join("");
         return `<tr>${tds}</tr>`;
       }).join("");
 
@@ -795,14 +991,19 @@
 
       return `
         ${note}
-        <table>
-          <thead><tr>${th}</tr></thead>
-          <tbody>${tr}</tbody>
-        </table>
+        <div class="tablewrap">
+          <table>
+            <thead><tr>${th}</tr></thead>
+            <tbody>${tr}</tbody>
+          </table>
+        </div>
       `;
     }
 
     async function hydrateDataBlocks(){
+      // Shared numeric formatting helpers used by multiple blocks.
+      const fmt2 = (n) => Number.isFinite(n) ? n.toFixed(2) : "";
+
       const csvBlocks = Array.from(contentEl.querySelectorAll("[data-csv]"));
       for (const el of csvBlocks){
         const file = el.getAttribute("data-csv");
@@ -810,9 +1011,11 @@
         try{
           const r = await fetch(`./data/${file}`, { cache: "no-store" });
           if (!r.ok) throw new Error(`${file} (${r.status})`);
+          const lm = r.headers.get("Last-Modified");
+          const lmMs = lm ? new Date(lm).getTime() : NaN;
           const text = await r.text();
           const rows = parseCsv(text);
-          el.innerHTML = renderTableFromRows(rows, maxRows);
+          el.innerHTML = renderBlockMetaLine(file, lmMs) + renderTableFromRows(rows, maxRows);
         }catch(e){
           el.innerHTML = `<p class="muted">Kunde inte ladda CSV: <span class="mono">${escapeHtml(String(e))}</span></p>`;
         }
@@ -824,8 +1027,10 @@
         try{
           const r = await fetch(`./data/${file}`, { cache: "no-store" });
           if (!r.ok) throw new Error(`${file} (${r.status})`);
+          const lm = r.headers.get("Last-Modified");
+          const lmMs = lm ? new Date(lm).getTime() : NaN;
           const obj = await r.json();
-          el.innerHTML = `<pre>${escapeHtml(JSON.stringify(obj, null, 2))}</pre>`;
+          el.innerHTML = renderBlockMetaLine(file, lmMs) + `<pre>${escapeHtml(JSON.stringify(obj, null, 2))}</pre>`;
         }catch(e){
           el.innerHTML = `<p class="muted">Kunde inte ladda JSON: <span class="mono">${escapeHtml(String(e))}</span></p>`;
         }
@@ -838,6 +1043,8 @@
         try{
           const r = await fetch(`./data/${file}`, { cache: "no-store" });
           if (!r.ok) throw new Error(`${file} (${r.status})`);
+          const lm = r.headers.get("Last-Modified");
+          const lmMs = lm ? new Date(lm).getTime() : NaN;
           const obj = await r.json();
 
           const cash = Number(obj?.cash_usd ?? NaN);
@@ -846,9 +1053,17 @@
           const rpnl = Number(obj?.realized_pnl_usd ?? 0);
           const openPos = Number(obj?.open_positions ?? 0);
           const ts = String(obj?.generated_at ?? "");
+          const tsMs = parseTimestampMs(ts);
+          const ageMs = Number.isFinite(tsMs)
+            ? Math.max(0, Date.now() - tsMs)
+            : (Number.isFinite(lmMs) ? Math.max(0, Date.now() - lmMs) : NaN);
+          const rel = Number.isFinite(ageMs) ? formatAge(ageMs) : "–";
+          const abs = ts || (Number.isFinite(lmMs) ? formatUtcTimestamp(lmMs) : "–");
 
-          const fmt2 = (n) => Number.isFinite(n) ? n.toFixed(2) : "";
+          const rpnlCls = numClass(rpnl);
+          const upnlCls = numClass(upnl);
           el.innerHTML = `
+            ${renderBlockMetaLine(file, lmMs)}
             <div class="grid">
               <div class="card">
                 <h4>Cash</h4>
@@ -858,11 +1073,12 @@
               <div class="card">
                 <h4>Equity</h4>
                 <div class="mono kpi">$${escapeHtml(fmt2(equity))}</div>
-                <p class="muted">PnL: <span class="mono">${escapeHtml(fmt2(rpnl))}</span> realized, <span class="mono">${escapeHtml(fmt2(upnl))}</span> unrealized</p>
+                <p class="muted">PnL: <span class="mono ${escapeHtml(rpnlCls)}">${escapeHtml(fmt2(rpnl))}</span> realized, <span class="mono ${escapeHtml(upnlCls)}">${escapeHtml(fmt2(upnl))}</span> unrealized</p>
               </div>
               <div class="card">
                 <h4>Senast uppdaterad</h4>
-                <p class="mono">${escapeHtml(ts)}</p>
+                <p class="mono">${escapeHtml(rel)}</p>
+                <p class="muted mono">${escapeHtml(abs)}</p>
                 <p class="muted">Källa: <span class="mono">${escapeHtml(String(file))}</span></p>
               </div>
             </div>
@@ -871,23 +1087,269 @@
           el.innerHTML = `<p class="muted">Kunde inte ladda paper-portfolio: <span class="mono">${escapeHtml(String(e))}</span></p>`;
         }
       }
+
+      // Live status summary
+      const liveBlocks = Array.from(contentEl.querySelectorAll("[data-live-status]"));
+      for (const el of liveBlocks){
+        const file = el.getAttribute("data-live-status");
+        try{
+          const r = await fetch(`./data/${file}`, { cache: "no-store" });
+          if (!r.ok) throw new Error(`${file} (${r.status})`);
+          const lm = r.headers.get("Last-Modified");
+          const lmMs = lm ? new Date(lm).getTime() : NaN;
+          const obj = await r.json();
+
+          const tradingMode = String(obj?.trading_mode ?? "–");
+          const strategyMode = String(obj?.strategy_mode ?? obj?.mode ?? "–");
+          const killswitch = (obj?.killswitch ?? obj?.kill_switch);
+          const maxOrders = obj?.pm_max_orders_per_tick ?? obj?.max_orders_per_tick;
+          const orderSize = obj?.pm_order_size_shares ?? obj?.order_size_shares;
+
+          const netEdgeMin = tryParseNumber(obj?.lead_lag_net_edge_min_pct);
+          const spreadCap = tryParseNumber(obj?.lead_lag_spread_cost_cap_pct);
+          const minLagMs = tryParseNumber(obj?.lead_lag_min_market_lag_ms);
+          const minNotional = tryParseNumber(obj?.lead_lag_min_trade_notional_usdc);
+          const hasGates = [netEdgeMin, spreadCap, minLagMs, minNotional].some(Number.isFinite);
+
+          const moveBase = tryParseNumber(obj?.lead_lag_spot_move_min_pct_base);
+          const moveDyn = tryParseNumber(obj?.lead_lag_spot_move_min_pct_dynamic);
+          const noisePct = tryParseNumber(obj?.lead_lag_spot_noise_pct);
+          const spreadCostPct = tryParseNumber(obj?.lead_lag_spread_cost_pct);
+          const hasMoveMeta = [moveBase, moveDyn, noisePct, spreadCostPct].some(Number.isFinite);
+          const ts = String(obj?.ts ?? obj?.generated_at ?? obj?.updated_at ?? "");
+          const tsMs = parseTimestampMs(ts);
+          const ageMs = Number.isFinite(tsMs)
+            ? Math.max(0, Date.now() - tsMs)
+            : (Number.isFinite(lmMs) ? Math.max(0, Date.now() - lmMs) : NaN);
+          const rel = Number.isFinite(ageMs) ? formatAge(ageMs) : "–";
+          const abs = ts || (Number.isFinite(lmMs) ? formatUtcTimestamp(lmMs) : "–");
+
+          const liveDot = tradingMode.toLowerCase() === "live" ? "bad" : "ok";
+          const ksText = (killswitch === null || killswitch === undefined) ? "–" : (killswitch ? "ON" : "OFF");
+          const ksCls = (killswitch === null || killswitch === undefined) ? "" : (killswitch ? "num bad" : "num good");
+
+          el.innerHTML = `
+            ${renderBlockMetaLine(file, lmMs)}
+            <div class="grid">
+              <div class="card">
+                <h4>Trading mode</h4>
+                <p class="pill"><span class="dot ${escapeHtml(liveDot)}"></span><span class="mono">${escapeHtml(tradingMode)}</span></p>
+              </div>
+              <div class="card">
+                <h4>Strategy mode</h4>
+                <div class="mono kpi">${escapeHtml(strategyMode)}</div>
+                ${hasGates ? `
+                  <p class="muted" style="margin-top:10px">Gates (lead–lag)</p>
+                  <p class="muted">Net edge min: <span class="mono">${escapeHtml(Number.isFinite(netEdgeMin) ? `${netEdgeMin.toFixed(3)}%` : "–")}</span></p>
+                  <p class="muted">Spread cap: <span class="mono">${escapeHtml(Number.isFinite(spreadCap) ? `${spreadCap.toFixed(3)}%` : "–")}</span></p>
+                  <p class="muted">Min lag: <span class="mono">${escapeHtml(Number.isFinite(minLagMs) ? `${Math.round(minLagMs)}ms` : "–")}</span></p>
+                  <p class="muted">Min notional: <span class="mono">${escapeHtml(Number.isFinite(minNotional) ? `$${fmt2(minNotional)}` : "–")}</span></p>
+                ` : ``}
+                ${hasMoveMeta ? `
+                  <p class="muted" style="margin-top:10px">Move threshold (adaptive)</p>
+                  <p class="muted">Move min base: <span class="mono">${escapeHtml(Number.isFinite(moveBase) ? `${moveBase.toFixed(3)}%` : "–")}</span></p>
+                  <p class="muted">Move min dyn: <span class="mono">${escapeHtml(Number.isFinite(moveDyn) ? `${moveDyn.toFixed(3)}%` : "–")}</span></p>
+                  <p class="muted">Spot noise (est): <span class="mono">${escapeHtml(Number.isFinite(noisePct) ? `${noisePct.toFixed(3)}%` : "–")}</span></p>
+                  <p class="muted">Spread cost (half): <span class="mono">${escapeHtml(Number.isFinite(spreadCostPct) ? `${spreadCostPct.toFixed(3)}%` : "–")}</span></p>
+                ` : ``}
+              </div>
+              <div class="card">
+                <h4>Killswitch</h4>
+                <div class="mono kpi ${escapeHtml(ksCls)}">${escapeHtml(ksText)}</div>
+              </div>
+              <div class="card">
+                <h4>PM order size</h4>
+                <div class="mono kpi">${escapeHtml(String(orderSize ?? "–"))}</div>
+                <p class="muted">shares per order</p>
+              </div>
+              <div class="card">
+                <h4>Max orders per tick</h4>
+                <div class="mono kpi">${escapeHtml(String(maxOrders ?? "–"))}</div>
+              </div>
+              <div class="card">
+                <h4>Senast uppdaterad</h4>
+                <p class="mono">${escapeHtml(rel)}</p>
+                <p class="muted mono">${escapeHtml(abs)}</p>
+              </div>
+            </div>
+          `;
+        }catch(e){
+          el.innerHTML = `<p class="muted">Kunde inte ladda live-status: <span class="mono">${escapeHtml(String(e))}</span></p>`;
+        }
+      }
+
+      // Lead-lag edge calculator
+      const edgeCalcBlocks = Array.from(contentEl.querySelectorAll("[data-edge-calculator]"));
+      for (const el of edgeCalcBlocks){
+        const file = el.getAttribute("data-edge-calculator");
+        try{
+          const r = await fetch(`./data/${file}`, { cache: "no-store" });
+          if (!r.ok) throw new Error(`${file} (${r.status})`);
+          const lm = r.headers.get("Last-Modified");
+          const lmMs = lm ? new Date(lm).getTime() : NaN;
+          const text = await r.text();
+          const rows = parseCsv(text);
+          if (rows.length < 2){
+            el.innerHTML = renderBlockMetaLine(file, lmMs) + `<p class="muted">Ingen data.</p>`;
+            continue;
+          }
+
+          const head = rows[0].map(h => String(h || "").trim());
+          const idx = (name) => head.findIndex(h => h === name);
+          const last = rows[rows.length - 1];
+
+          const ts = String(last[idx("ts")] ?? "");
+          const market = String(last[idx("market")] ?? "");
+          const raw = tryParseNumber(last[idx("raw_edge")]);
+          const spread = tryParseNumber(last[idx("spread_cost")]);
+          const fees = tryParseNumber(last[idx("fees")]);
+          const net = tryParseNumber(last[idx("net_edge")]);
+          const status = String(last[idx("execution_status")] ?? "");
+          const reason = String(last[idx("reason")] ?? "");
+          const reasonHuman = humanizeReason(reason);
+
+          const gross = Number.isFinite(raw) ? Math.abs(raw) : NaN;
+          const spreadAbs = Number.isFinite(spread) ? Math.abs(spread) : 0;
+          const feesAbs = Number.isFinite(fees) ? Math.abs(fees) : 0;
+          const netAbs = Number.isFinite(net) ? Math.abs(net) : 0;
+
+          const pct = (x) => (gross > 0 && Number.isFinite(x)) ? Math.max(0, Math.min(100, (x / gross) * 100)) : 0;
+          let wSpread = pct(spreadAbs);
+          let wFees = pct(feesAbs);
+          let wNet = Math.max(0, 100 - wSpread - wFees);
+
+          // If net edge is negative, show no green segment.
+          const netIsGood = Number.isFinite(net) && net > 0;
+          if (!netIsGood) wNet = 0;
+
+          const fmt = (n) => Number.isFinite(n) ? `${n.toFixed(3)}%` : "–";
+          const netCls = netIsGood ? "num good" : "num warn";
+          const segNetCls = netIsGood ? "netpos" : "netneg";
+          const statusText = status ? status : (netIsGood ? "TRIGGERED" : "SKIPPED");
+
+          el.innerHTML = `
+            ${renderBlockMetaLine(file, lmMs)}
+            <div class="edgecalc">
+              <div class="row">
+                <div>
+                  <p class="title"><strong>${escapeHtml(market || "–")}</strong></p>
+                  <p class="sub mono">${escapeHtml(ts || "–")}</p>
+                </div>
+                <div class="net">
+                  <div class="label">Netto edge</div>
+                  <div class="value mono ${escapeHtml(netCls)}">${escapeHtml(fmt(net))}</div>
+                </div>
+              </div>
+              <div class="edgebar" role="img" aria-label="Brutto edge uppdelad i spread, avgifter och netto">
+                <div class="seg spread" style="width:${wSpread.toFixed(2)}%"><span>Spread ${escapeHtml(fmt(-spreadAbs))}</span></div>
+                <div class="seg fee" style="width:${wFees.toFixed(2)}%"><span>Fee ${escapeHtml(fmt(-feesAbs))}</span></div>
+                <div class="seg ${segNetCls}" style="width:${wNet.toFixed(2)}%"><span>Netto ${escapeHtml(fmt(net))}</span></div>
+              </div>
+              <div class="foot">
+                <div>Brutto: <strong class="mono">${escapeHtml(fmt(raw))}</strong></div>
+                <div>Status: <strong>${escapeHtml(statusText)}</strong> <span class="mono">${escapeHtml(reasonHuman ? `(${reasonHuman})` : "")}</span></div>
+              </div>
+            </div>
+          `;
+        }catch(e){
+          el.innerHTML = `<p class="muted">Kunde inte ladda edge calculator: <span class="mono">${escapeHtml(String(e))}</span></p>`;
+        }
+      }
+
+      // Lag vs latency
+      const lagBlocks = Array.from(contentEl.querySelectorAll("[data-lag-latency]"));
+      for (const el of lagBlocks){
+        const file = el.getAttribute("data-lag-latency");
+        try{
+          const r = await fetch(`./data/${file}`, { cache: "no-store" });
+          if (!r.ok) throw new Error(`${file} (${r.status})`);
+          const lm = r.headers.get("Last-Modified");
+          const lmMs = lm ? new Date(lm).getTime() : NaN;
+          const obj = await r.json();
+
+          const lagMs = Number(obj?.market_lag_ms ?? NaN);
+          const sysMs = Number(obj?.system_latency_ms ?? NaN);
+          const has = Number.isFinite(lagMs) && Number.isFinite(sysMs);
+          // Guard: very small lag estimates are often unstable/meaningless (esp right after restart).
+          const minMeaningfulLagMs = 100;
+          const tooSmallLag = has ? (lagMs >= 0 && lagMs < minMeaningfulLagMs) : false;
+          const ok = (has && !tooSmallLag) ? (sysMs < lagMs) : null;
+
+          const ringCls = (vOk) => vOk === null ? "warn" : (vOk ? "good" : "bad");
+          const fmtMs = (n) => Number.isFinite(n) ? `${Math.round(n)}ms` : "–";
+
+          el.innerHTML = `
+            ${renderBlockMetaLine(file, lmMs)}
+            <div class="gauges">
+              <div class="gauge">
+                <div class="ring ${escapeHtml(ringCls(ok))}"></div>
+                <div>
+                  <p class="name">Market Lag</p>
+                  <p class="val mono">${escapeHtml(fmtMs(lagMs))}</p>
+                  <p class="hint">PM efter Kraken (est)</p>
+                </div>
+              </div>
+              <div class="gauge">
+                <div class="ring ${escapeHtml(ringCls(ok))}"></div>
+                <div>
+                  <p class="name">System Latency</p>
+                  <p class="val mono">${escapeHtml(fmtMs(sysMs))}</p>
+                  <p class="hint">Loop → snapshot</p>
+                </div>
+              </div>
+            </div>
+            <p class="muted" style="margin-top:10px">Status: <strong>${escapeHtml(ok === null ? (tooSmallLag ? "WARN (lag ~0, osäkert)" : "INGEN DATA") : (ok ? "OK (snabbare än marknaden)" : "SENT (långsammare än marknaden)"))}</strong></p>
+          `;
+        }catch(e){
+          el.innerHTML = `<p class="muted">Kunde inte ladda lag/latency: <span class="mono">${escapeHtml(String(e))}</span></p>`;
+        }
+      }
+
+      // Missed opportunities (from edge_calculator_live.csv)
+      const missedBlocks = Array.from(contentEl.querySelectorAll("[data-missed-opps]"));
+      for (const el of missedBlocks){
+        const file = el.getAttribute("data-missed-opps");
+        const maxRows = parseInt(el.getAttribute("data-max-rows") || "25", 10);
+        try{
+          const r = await fetch(`./data/${file}`, { cache: "no-store" });
+          if (!r.ok) throw new Error(`${file} (${r.status})`);
+          const lm = r.headers.get("Last-Modified");
+          const lmMs = lm ? new Date(lm).getTime() : NaN;
+          const text = await r.text();
+          const rows = parseCsv(text);
+          if (rows.length < 2){
+            el.innerHTML = renderBlockMetaLine(file, lmMs) + `<p class="muted">Ingen data.</p>`;
+            continue;
+          }
+          const head = rows[0];
+          const hi = head.map(h => String(h || "").trim());
+          const idx = (name) => hi.indexOf(name);
+          const iStatus = idx("execution_status");
+          const iReason = idx("reason");
+
+          const missed = [rows[0]];
+          for (let i = rows.length - 1; i >= 1 && missed.length <= maxRows; i--){
+            const rr = rows[i];
+            const st = String(rr[iStatus] ?? "").toUpperCase();
+            if (st !== "SKIPPED") continue;
+            const reason = String(rr[iReason] ?? "");
+            if (!reason) continue;
+            const rr2 = rr.slice();
+            rr2[iReason] = humanizeReason(reason);
+            missed.push(rr2);
+          }
+
+          el.innerHTML = renderBlockMetaLine(file, lmMs) + renderTableFromRows(missed, maxRows);
+        }catch(e){
+          el.innerHTML = `<p class="muted">Kunde inte ladda missed opportunities: <span class="mono">${escapeHtml(String(e))}</span></p>`;
+        }
+      }
     }
 
     // ----------------------------
     // Events
     // ----------------------------
     window.addEventListener("hashchange", render);
-    btnReload.addEventListener("click", () => render());
-    navSearchEl.addEventListener("input", () => buildNav(navSearchEl.value));
-
-    // Clock
-    setInterval(() => {
-      const d = new Date();
-      const hh = String(d.getHours()).padStart(2,"0");
-      const mm = String(d.getMinutes()).padStart(2,"0");
-      const ss = String(d.getSeconds()).padStart(2,"0");
-      clockEl.textContent = `${hh}:${mm}:${ss}`;
-    }, 250);
 
     // Init
     buildNav();

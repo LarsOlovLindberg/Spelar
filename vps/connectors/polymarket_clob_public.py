@@ -42,25 +42,32 @@ def best_bid_ask(orderbook: dict[str, Any]) -> tuple[float | None, float | None]
     bids = orderbook.get("bids")
     asks = orderbook.get("asks")
 
-    def _best(side: Any) -> float | None:
+    def _prices(side: Any) -> list[float]:
         if not isinstance(side, list):
-            return None
+            return []
         side_list = cast(list[Any], side)
-        if len(side_list) == 0:
-            return None
+        out: list[float] = []
+        for level_any in side_list:
+            if not isinstance(level_any, dict):
+                continue
+            level = cast(dict[str, Any], level_any)
+            px_any: Any | None = None
+            if "price" in level:
+                px_any = level.get("price")
+            elif "p" in level:
+                px_any = level.get("p")
+            if px_any is None:
+                continue
+            try:
+                px = float(px_any)
+            except Exception:
+                continue
+            if px > 0:
+                out.append(px)
+        return out
 
-        best_any: Any = side_list[0]
-        if not isinstance(best_any, dict):
-            return None
-        best = cast(dict[str, Any], best_any)
-        for k in ("price", "p"):
-            if k in best:
-                try:
-                    return float(best[k])
-                except Exception:
-                    return None
-        return None
-
-    bid = _best(bids)
-    ask = _best(asks)
+    bid_prices = _prices(bids)
+    ask_prices = _prices(asks)
+    bid = max(bid_prices) if bid_prices else None
+    ask = min(ask_prices) if ask_prices else None
     return bid, ask

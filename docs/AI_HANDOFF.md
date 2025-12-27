@@ -14,6 +14,10 @@ Det här dokumentet är skrivet för nästa AI (eller nästa person) som tar öv
 - `scripts/`: PowerShell för deploy (FTP) och VPS-sync (SCP).
 - `vps/`: Python-agent + connectors som skriver snapshots till `vps/out/` på VPS.
 
+Nyare strategi-moduler:
+- `vps/strategies/lead_lag.py`: lead–lag edge (Kraken spot leder, PM CLOB släpar).
+- `vps/connectors/kraken_spot_public.py`: minimal Kraken spot ticker-klient (public).
+
 ## Portalen (UI)
 ### Router
 - Hash-baserad routing (t.ex. `#/start/overview`).
@@ -53,10 +57,17 @@ Vanliga operativa kommandon på VPS:
 - FTP deploy: [scripts/deploy-ftp.ps1](../scripts/deploy-ftp.ps1)
 - One-command (web + data): [scripts/deploy-all.ps1](../scripts/deploy-all.ps1)
 
+Kod till VPS:
+- Upload + restart (default): [scripts/upload-to-vps.ps1](../scripts/upload-to-vps.ps1)
+  - Om du vill ladda upp utan restart: kör med `-NoRestart`
+
 Normalt flöde:
 1) VPS skriver snapshots i `/opt/spelar_eu/vps/out`.
 2) Windows-maskinen kör `scripts/sync-vps-stats.ps1` (SCP) → lägger filer i `web/data/`.
 3) Scriptet deployar **data-only** (FTP) till webbservern.
+
+Alternativt (om du vill lägga FTP creds på VPS):
+- Agenten kan själv FTP-ladda upp portal-filer direkt från VPS om `FTP_HOST/FTP_USER/FTP_PASS` är satta.
 
 Obs:
 - UI-ändringar kräver **full deploy av `web/`**.
@@ -73,8 +84,20 @@ Nyckel-variabler (översikt):
 - `TRADING_MODE=paper|live` (default ska vara paper)
 - `POLY_LIVE_CONFIRM=YES` krävs för live
 - `PM_MAX_ORDERS_PER_TICK` cap per tick (kan sättas till `0` för “0-risk live verification”)
-- `EDGE_THRESHOLD` (högt värde + `PM_MAX_ORDERS_PER_TICK=0` är säkert testläge)
+- `EDGE_THRESHOLD` (gäller främst fair_model-läget)
 - `KILLSWITCH_FILE` om finns/är aktiverad ska stoppa live
+
+Strategival (edge-definition):
+- `STRATEGY_MODE=lead_lag|fair_model`
+  - `lead_lag` är nu default om env-var saknas.
+  - `fair_model` är den äldre vägen (pm_price vs fair_p från Deribit/Kraken futures).
+
+Lead–lag (kraken spot → pm clob) – viktiga env (översikt):
+- `KRAKEN_SPOT_PAIR=XBTUSD`
+- `LEAD_LAG_SIDE=YES|NO`
+- `LEAD_LAG_LOOKBACK_POINTS`, `LEAD_LAG_SPOT_MOVE_MIN_PCT`, `LEAD_LAG_EDGE_MIN_PCT`, `LEAD_LAG_EDGE_EXIT_PCT`, `LEAD_LAG_MAX_HOLD_SECS`
+- Orderbok-sizing: `LEAD_LAG_ENABLE_ORDERBOOK_SIZING`, `LEAD_LAG_SLIPPAGE_CAP`, `LEAD_LAG_MAX_FRACTION_OF_BAND_LIQUIDITY`, `LEAD_LAG_HARD_CAP_USDC`
+- Freshness-gate: `FRESHNESS_MAX_AGE_SECS`
 
 ## Viktiga output-filer (för health och “mapping green”)
 För att sync-mappen ska vara “grön” även utan secrets skriver agenten vissa snapshots som stubbar när den saknar credentials:
@@ -84,11 +107,21 @@ För att sync-mappen ska vara “grön” även utan secrets skriver agenten vis
 Health/sammanfattning:
 - `sources_health.json`
 
+Lead–lag/paper (portal):
+- `pm_paper_portfolio.json`, `pm_paper_positions.csv`, `pm_paper_trades.csv`, `pm_paper_candidates.csv`
+- `pm_orders.csv` (paper-ordrar loggas även när live-client saknas)
+
 ## Kända gotchas / felsökning
 - 404 på `/data/pm_paper_*.csv|.json` på live-siten betyder oftast att:
   - VPS inte producerar filerna, eller
   - sync/deploy data-only inte körts, eller
   - mappingen saknar filen.
+
+- Lead–lag “inga trades” är ofta inte en bug:
+  - warmup (för få ticks för `LEAD_LAG_LOOKBACK_POINTS`)
+  - `FRESHNESS_MAX_AGE_SECS` för strikt
+  - trösklar för höga (`LEAD_LAG_EDGE_MIN_PCT`, `LEAD_LAG_SPOT_MOVE_MIN_PCT`)
+  - se `pm_paper_candidates.csv` för `decision/reason`.
 
 - Apache index-prio:
   - Server kan föredra `index.php` före `index.html`.

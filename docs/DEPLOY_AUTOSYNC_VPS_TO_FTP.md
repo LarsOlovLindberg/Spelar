@@ -31,6 +31,16 @@ Default mapping för PM↔Kraken ligger i `scripts/vps_sync_map_pm.json` och syn
 - `kraken_futures_fills.csv`
 - `executed_trades.csv`
 
+## Deploya kod till VPS (agenten)
+Autosync-scriptet flyttar bara snapshot-filer. Om du har ändrat agentkoden under `vps/` (t.ex. connectors/strategier), deploya den till VPS och restart:a tjänsten:
+
+```powershell
+./scripts/upload-to-vps.ps1 -VpsIp "77.42.42.124" -VpsUser "root" -RemoteRoot "/opt/spelar_eu" -ServiceName "spelar-agent"
+```
+
+- Scriptet gör upload av hela `vps/` och restartar `spelar-agent` som default.
+- Om du vill ladda upp utan restart: lägg till `-NoRestart`.
+
 ## Kontinuerligt (watch/loop)
 
 ```powershell

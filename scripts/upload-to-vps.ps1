@@ -8,6 +8,11 @@ param(
   [Parameter(Mandatory = $false)]
   [string]$RemoteRoot = "/opt/spelar_eu",
 
+  [Parameter(Mandatory = $false)]
+  [string]$ServiceName = "spelar-agent",
+
+  [switch]$NoRestart,
+
   [switch]$SkipArchiveCleanup
 )
 
@@ -56,6 +61,13 @@ try {
 
   Write-Host "[4/4] Extracting on VPS..."
   ssh $target "cd $RemoteRoot; tar -xzvf spelar_eu_vps.tar.gz; rm spelar_eu_vps.tar.gz" | Out-Host
+
+  if (-not $NoRestart) {
+    Write-Host "[VPS] Restarting systemd service: $ServiceName ..."
+    ssh $target "sudo systemctl restart $ServiceName; sudo systemctl --no-pager --full status $ServiceName | head -120" | Out-Host
+  } else {
+    Write-Host "[VPS] NoRestart set; skipping systemd restart."
+  }
 
   Write-Host "[OK] Uploaded vps/ to $RemoteRoot/vps"
 } finally {

@@ -4,7 +4,11 @@
     {
       "name": "Example market",
       "polymarket": {
-        "market_url": "https://polymarket.com/market/REPLACE_ME_SLUG"
+        "market_url": "https://polymarket.com/market/REPLACE_ME_SLUG",
+        "outcome": "Yes"
+      },
+      "kraken_spot": {
+        "pair": "XBTUSD"
       },
       "kraken_futures": {
         "symbol": "PF_XBTUSD",
