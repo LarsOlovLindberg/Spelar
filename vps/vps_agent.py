@@ -34,6 +34,7 @@ from vps.connectors.polymarket_gamma import GammaMarketListing, PolymarketGammaP
 from vps.connectors.polymarket_clob_public import PolymarketClobPublic, best_bid_ask
 from vps.connectors.kraken_spot_public import KrakenSpotPublic
 from vps.strategies.lead_lag import LeadLagEngine
+from vps.strategies.pm_trend import PmTrendEngine
 from vps.connectors.polymarket_clob_trading import (
     PolymarketClobApiCreds,
     PolymarketClobLiveConfig,
@@ -447,7 +448,7 @@ class Config:
     interval_s: float
 
     # Strategy selection
-    strategy_mode: str  # fair_model|lead_lag
+    strategy_mode: str  # fair_model|lead_lag|pm_trend
 
     # public endpoints (optional)
     polymarket_public_url: str | None
@@ -491,6 +492,12 @@ class Config:
     lead_lag_scale_max_adds: int
     lead_lag_scale_size_mult: float
     lead_lag_scale_max_total_shares: float
+
+    # PM trend (PM-only, no external reference)
+    pm_trend_lookback_points: int
+    pm_trend_move_min_pct: float
+    pm_trend_exit_move_min_pct: float
+    pm_trend_auto_side: bool
 
     # Drift / stability
     freshness_max_age_s: float
@@ -610,6 +617,11 @@ def load_config() -> Config:
     lead_lag_scale_max_adds = int(os.getenv("LEAD_LAG_SCALE_MAX_ADDS", "3") or "3")
     lead_lag_scale_size_mult = float(os.getenv("LEAD_LAG_SCALE_SIZE_MULT", "0.50") or "0.50")
     lead_lag_scale_max_total_shares = float(os.getenv("LEAD_LAG_SCALE_MAX_TOTAL_SHARES", "50") or "50")
+
+    pm_trend_lookback_points = int(os.getenv("PM_TREND_LOOKBACK_POINTS", str(lead_lag_lookback_points)) or str(lead_lag_lookback_points))
+    pm_trend_move_min_pct = float(os.getenv("PM_TREND_MOVE_MIN_PCT", "0.10") or "0.10")
+    pm_trend_exit_move_min_pct = float(os.getenv("PM_TREND_EXIT_MOVE_MIN_PCT", "0.00") or "0.00")
+    pm_trend_auto_side = (os.getenv("PM_TREND_AUTO_SIDE", "1") or "1").strip().lower() not in {"0", "false", "no"}
 
     freshness_max_age_s = float(os.getenv("FRESHNESS_MAX_AGE_SECS", "60") or "60")
 
@@ -745,6 +757,10 @@ def load_config() -> Config:
         lead_lag_scale_max_adds=lead_lag_scale_max_adds,
         lead_lag_scale_size_mult=lead_lag_scale_size_mult,
         lead_lag_scale_max_total_shares=lead_lag_scale_max_total_shares,
+        pm_trend_lookback_points=pm_trend_lookback_points,
+        pm_trend_move_min_pct=pm_trend_move_min_pct,
+        pm_trend_exit_move_min_pct=pm_trend_exit_move_min_pct,
+        pm_trend_auto_side=pm_trend_auto_side,
         freshness_max_age_s=freshness_max_age_s,
         clob_depth_levels=clob_depth_levels,
         pm_orderbook_workers=pm_orderbook_workers,
@@ -1119,6 +1135,7 @@ def write_outputs(  # pyright: ignore
     pm: dict[str, Any] | None,
     kraken: dict[str, Any] | None,
     lead_lag_engine: LeadLagEngine | None = None,
+    pm_trend_engine: PmTrendEngine | None = None,
     health_tracker: LeadLagHealthTracker | None = None,
     latency_tracker: LatencyTracker | None = None,
     runtime_cache: RuntimeCache | None = None,
@@ -1154,6 +1171,10 @@ def write_outputs(  # pyright: ignore
         "market_lag_confidence": None,
         "market_lag_points": None,
         "market_lag_reason": None,
+        "pm_trend_lookback_points": int(cfg.pm_trend_lookback_points),
+        "pm_trend_move_min_pct": float(cfg.pm_trend_move_min_pct),
+        "pm_trend_exit_move_min_pct": float(cfg.pm_trend_exit_move_min_pct),
+        "pm_trend_auto_side": bool(cfg.pm_trend_auto_side),
         # Lead–lag gating parameters (portal-facing, non-secret)
         "lead_lag_net_edge_min_pct": cfg.lead_lag_net_edge_min_pct,
         "lead_lag_spread_cost_cap_pct": cfg.lead_lag_spread_cost_cap_pct,
@@ -1471,7 +1492,7 @@ def write_outputs(  # pyright: ignore
             ]
 
         pm_clob = PolymarketClobPublic(base_url=cfg.polymarket_clob_base_url)
-        kr_spot = KrakenSpotPublic(base_url=cfg.kraken_spot_base_url)
+        kr_spot = KrakenSpotPublic(base_url=cfg.kraken_spot_base_url) if cfg.strategy_mode != "pm_trend" else None
         deribit = DeribitOptionsPublic()
         gamma = PolymarketGammaPublic()
         # Portal expects Gamma to be present; mark it OK by default and flip to FAIL on actual errors.
@@ -2268,9 +2289,11 @@ def write_outputs(  # pyright: ignore
                 }
             except Exception as e:
                 live_status["pm_live_positions_error"] = str(e)
-        # Lead-lag strategy path: Kraken spot leads, Polymarket CLOB lags.
-        if cfg.strategy_mode == "lead_lag":
-            if lead_lag_engine is None:
+        # Lead-lag / PM-trend strategy path:
+        # - lead_lag: Kraken spot leads, Polymarket CLOB lags
+        # - pm_trend: Polymarket-only trend following (no external reference)
+        if cfg.strategy_mode in {"lead_lag", "pm_trend"}:
+            if cfg.strategy_mode == "lead_lag" and lead_lag_engine is None:
                 raise RuntimeError("lead_lag_engine is required when STRATEGY_MODE=lead_lag")
 
             # Cache spot tickers per pair per tick.
@@ -2312,10 +2335,23 @@ def write_outputs(  # pyright: ignore
                     chosen_outcome = str(pm_cfg.get("outcome") or "").strip() or None
                     market_ref = str(pm_cfg.get("market_url") or pm_cfg.get("market_slug") or "").strip() or None
 
+                    # PM-trend: optionally auto-pick YES/NO per market based on trend.
+                    # Only possible when we have a market_ref (slug) to resolve both outcomes.
+                    pm_auto_side = bool(cfg.strategy_mode == "pm_trend" and cfg.pm_trend_auto_side and market_ref)
+
                     if not chosen_outcome:
                         side_raw = str(pm_cfg.get("side") or "").strip().upper()
                         if side_raw in {"YES", "NO"}:
                             chosen_outcome = "Yes" if side_raw == "YES" else "No"
+
+                    # Explicit override from the map/scan object.
+                    if "auto_side" in pm_cfg:
+                        try:
+                            pm_auto_side = bool(pm_cfg.get("auto_side")) and bool(cfg.strategy_mode == "pm_trend") and bool(cfg.pm_trend_auto_side) and bool(market_ref)
+                        except Exception:
+                            pass
+                else:
+                    pm_auto_side = False
 
                 fm_any = mkt.get("fair_model")
                 fm = cast(dict[str, Any], fm_any) if isinstance(fm_any, dict) else {}
@@ -2324,20 +2360,24 @@ def write_outputs(  # pyright: ignore
 
                 # Spot pair: global default or per-market override
                 pair = cfg.kraken_spot_pair
-                kspot_block = mkt.get("kraken_spot")
-                if isinstance(kspot_block, dict):
-                    pair = str(cast(dict[str, Any], kspot_block).get("pair") or pair).strip() or pair
+                if cfg.strategy_mode != "pm_trend":
+                    kspot_block = mkt.get("kraken_spot")
+                    if isinstance(kspot_block, dict):
+                        pair = str(cast(dict[str, Any], kspot_block).get("pair") or pair).strip() or pair
 
                 market_items.append(
                     {
                         "mkt": mkt,
                         "market_name": market_name,
                         "token_id": token_id,
+                        "token_id_yes": None,
+                        "token_id_no": None,
                         "chosen_outcome": chosen_outcome,
                         "market_ref": market_ref,
                         "pair": pair,
                         "fair_mode": fair_mode,
                         "direction": direction,
+                        "pm_auto_side": bool(pm_auto_side),
                     }
                 )
 
@@ -2443,7 +2483,10 @@ def write_outputs(  # pyright: ignore
             token_job_keys: set[tuple[str, str]] = set()
             for it in market_items:
                 token_id = cast(str | None, it.get("token_id"))
-                if token_id:
+                # If PM-trend auto-side is enabled, we still want to resolve both sides
+                # even if a single token_id was provided.
+                pm_auto_side = bool(cfg.strategy_mode == "pm_trend" and cfg.pm_trend_auto_side and it.get("pm_auto_side"))
+                if token_id and not pm_auto_side:
                     continue
 
                 market_ref = cast(str | None, it.get("market_ref"))
@@ -2451,15 +2494,26 @@ def write_outputs(  # pyright: ignore
                 if not market_ref or not chosen_outcome:
                     continue
 
-                cache_key = (market_ref, chosen_outcome)
-                tok_cached = _cache_get_token_id(cache, key=cache_key, now_ms=now_ms, ttl_s=cfg.gamma_cache_ttl_s)
-                if tok_cached:
-                    it["token_id"] = tok_cached
-                    continue
+                if pm_auto_side:
+                    for outcome in ("Yes", "No"):
+                        cache_key = (market_ref, outcome)
+                        tok_cached = _cache_get_token_id(cache, key=cache_key, now_ms=now_ms, ttl_s=cfg.gamma_cache_ttl_s)
+                        if tok_cached:
+                            it["token_id_yes" if outcome == "Yes" else "token_id_no"] = tok_cached
+                            continue
+                        if cache_key not in token_job_keys:
+                            token_job_keys.add(cache_key)
+                            token_jobs.append(cache_key)
+                else:
+                    cache_key = (market_ref, chosen_outcome)
+                    tok_cached = _cache_get_token_id(cache, key=cache_key, now_ms=now_ms, ttl_s=cfg.gamma_cache_ttl_s)
+                    if tok_cached:
+                        it["token_id"] = tok_cached
+                        continue
 
-                if cache_key not in token_job_keys:
-                    token_job_keys.add(cache_key)
-                    token_jobs.append(cache_key)
+                    if cache_key not in token_job_keys:
+                        token_job_keys.add(cache_key)
+                        token_jobs.append(cache_key)
 
             if token_jobs:
                 # Snapshot Gamma markets from cache in the main thread (avoid concurrent dict read/write).
@@ -2527,25 +2581,37 @@ def write_outputs(  # pyright: ignore
                 # Fill in token_id on all market items from cache.
                 for it in market_items:
                     token_id = cast(str | None, it.get("token_id"))
-                    if token_id:
+                    pm_auto_side = bool(cfg.strategy_mode == "pm_trend" and cfg.pm_trend_auto_side and it.get("pm_auto_side"))
+                    if token_id and not pm_auto_side:
                         continue
                     market_ref = cast(str | None, it.get("market_ref"))
                     chosen_outcome = cast(str | None, it.get("chosen_outcome"))
                     if not market_ref or not chosen_outcome:
                         continue
-                    tok_cached = _cache_get_token_id(cache, key=(market_ref, chosen_outcome), now_ms=now_ms, ttl_s=cfg.gamma_cache_ttl_s)
-                    if tok_cached:
-                        it["token_id"] = tok_cached
+                    if pm_auto_side:
+                        tok_y = _cache_get_token_id(cache, key=(market_ref, "Yes"), now_ms=now_ms, ttl_s=cfg.gamma_cache_ttl_s)
+                        tok_n = _cache_get_token_id(cache, key=(market_ref, "No"), now_ms=now_ms, ttl_s=cfg.gamma_cache_ttl_s)
+                        if tok_y:
+                            it["token_id_yes"] = tok_y
+                        if tok_n:
+                            it["token_id_no"] = tok_n
+                    else:
+                        tok_cached = _cache_get_token_id(cache, key=(market_ref, chosen_outcome), now_ms=now_ms, ttl_s=cfg.gamma_cache_ttl_s)
+                        if tok_cached:
+                            it["token_id"] = tok_cached
 
             for it in market_items:
                 mkt = cast(dict[str, Any], it.get("mkt") or {})
                 market_name = str(it.get("market_name") or "market")
                 token_id = cast(str | None, it.get("token_id"))
+                token_id_yes = cast(str | None, it.get("token_id_yes"))
+                token_id_no = cast(str | None, it.get("token_id_no"))
                 chosen_outcome = cast(str | None, it.get("chosen_outcome"))
                 market_ref = cast(str | None, it.get("market_ref"))
                 pair = str(it.get("pair") or cfg.kraken_spot_pair).strip() or cfg.kraken_spot_pair
                 fair_mode = str(it.get("fair_mode") or "").strip().lower()
                 direction = str(it.get("direction") or "").strip().lower()
+                pm_auto_side = bool(cfg.strategy_mode == "pm_trend" and cfg.pm_trend_auto_side and it.get("pm_auto_side"))
 
                 # Determine outcome if missing.
                 if not chosen_outcome:
@@ -2581,6 +2647,29 @@ def write_outputs(  # pyright: ignore
                     except Exception as e:
                         sources_health["polymarket"]["gamma"] = {"ok": False, "error": str(e)}
                         token_id = None
+
+                # PM-trend auto-side: if we have both tokens, create one ctx for each side.
+                if cfg.strategy_mode == "pm_trend" and pm_auto_side and token_id_yes and token_id_no:
+                    group_key = market_ref or market_name
+                    ctxs.append(
+                        {
+                            "market_name": market_name,
+                            "market_ref": market_ref,
+                            "token_id": str(token_id_yes),
+                            "chosen_outcome": "Yes",
+                            "auto_side_group": group_key,
+                        }
+                    )
+                    ctxs.append(
+                        {
+                            "market_name": market_name,
+                            "market_ref": market_ref,
+                            "token_id": str(token_id_no),
+                            "chosen_outcome": "No",
+                            "auto_side_group": group_key,
+                        }
+                    )
+                    continue
 
                 if not token_id:
                     append_csv_row(
@@ -2631,82 +2720,96 @@ def write_outputs(  # pyright: ignore
                     )
                     continue
 
-                # Fetch spot once per pair
-                if pair not in spot_by_pair:
-                    try:
-                        t_spot0 = time.perf_counter()
-                        tick = kr_spot.get_ticker_last(pair=pair)
-                        if latency_tracker is not None:
-                            latency_tracker.record_spot_fetch(float((time.perf_counter() - t_spot0) * 1000.0))
-                        spot_by_pair[pair] = float(tick.last)
-                        spot_ts_by_pair[pair] = tick.ts
-                    except Exception as e:
-                        sources_health["kraken"].setdefault("spot", {})
-                        sources_health["kraken"]["spot"] = {"ok": False, "error": str(e)}
-                        spot_by_pair[pair] = float("nan")
-                        spot_ts_by_pair[pair] = ts_dt
+                if cfg.strategy_mode != "pm_trend":
+                    # Fetch spot once per pair
+                    if pair not in spot_by_pair:
+                        try:
+                            t_spot0 = time.perf_counter()
+                            if kr_spot is None:
+                                raise RuntimeError("kraken spot client not available")
+                            tick = kr_spot.get_ticker_last(pair=pair)
+                            if latency_tracker is not None:
+                                latency_tracker.record_spot_fetch(float((time.perf_counter() - t_spot0) * 1000.0))
+                            spot_by_pair[pair] = float(tick.last)
+                            spot_ts_by_pair[pair] = tick.ts
+                        except Exception as e:
+                            sources_health["kraken"].setdefault("spot", {})
+                            sources_health["kraken"]["spot"] = {"ok": False, "error": str(e)}
+                            spot_by_pair[pair] = float("nan")
+                            spot_ts_by_pair[pair] = ts_dt
 
-                spot_price = float(spot_by_pair[pair])
+                    spot_price = float(spot_by_pair[pair])
 
-                if not (spot_price == spot_price):
-                    append_csv_row(
-                        p_pm_paper_candidates,
-                        [
-                            "ts",
-                            "market",
-                            "market_ref",
-                            "token",
-                            "outcome",
-                            "pm_bid",
-                            "pm_ask",
-                            "pm_mid",
-                            "odds",
-                            "odds_allowed",
-                            "fair_p",
-                            "ev",
-                            "edge",
-                            "spread",
-                            "cost_est",
-                            "edge_net",
-                            "signal",
-                            "decision",
-                            "reason",
-                        ],
-                        [
-                            ts,
-                            market_name,
-                            market_ref or "",
-                            token_id,
-                            chosen_outcome or "",
-                            "",
-                            "",
-                            "",
-                            "",
-                            "",
-                            "",
-                            "",
-                            "",
-                            "",
-                            "",
-                            "",
-                            "",
-                            "skip",
-                            "missing_spot",
-                        ],
-                        keep_last=5000,
+                    if not (spot_price == spot_price):
+                        append_csv_row(
+                            p_pm_paper_candidates,
+                            [
+                                "ts",
+                                "market",
+                                "market_ref",
+                                "token",
+                                "outcome",
+                                "pm_bid",
+                                "pm_ask",
+                                "pm_mid",
+                                "odds",
+                                "odds_allowed",
+                                "fair_p",
+                                "ev",
+                                "edge",
+                                "spread",
+                                "cost_est",
+                                "edge_net",
+                                "signal",
+                                "decision",
+                                "reason",
+                            ],
+                            [
+                                ts,
+                                market_name,
+                                market_ref or "",
+                                token_id,
+                                chosen_outcome or "",
+                                "",
+                                "",
+                                "",
+                                "",
+                                "",
+                                "",
+                                "",
+                                "",
+                                "",
+                                "",
+                                "",
+                                "",
+                                "skip",
+                                "missing_spot",
+                            ],
+                            keep_last=5000,
+                        )
+                        continue
+
+                    ctxs.append(
+                        {
+                            "market_name": market_name,
+                            "market_ref": market_ref,
+                            "token_id": token_id,
+                            "chosen_outcome": chosen_outcome,
+                            "pair": pair,
+                            "spot_price": spot_price,
+                        }
                     )
-                    continue
-
-                ctxs.append(
-                    {
-                        "market_name": market_name,
-                        "market_ref": market_ref,
-                        "token_id": token_id,
-                        "chosen_outcome": chosen_outcome,
-                        "pair": pair,
-                        "spot_price": spot_price,
-                    }
-                )
+                else:
+                    # PM-only strategy: no external reference.
+                    ctxs.append(
+                        {
+                            "market_name": market_name,
+                            "market_ref": market_ref,
+                            "token_id": token_id,
+                            "chosen_outcome": chosen_outcome,
+                            "auto_side_group": market_ref or None,
+                        }
+                    )
 
             # Fetch PM orderbooks (optionally in parallel).
             orderbook_by_token: dict[str, dict[str, Any] | None] = {}
@@ -2762,6 +2865,80 @@ def write_outputs(  # pyright: ignore
                                 pass
                         orderbook_by_token[tok2] = ob
 
+            # PM-trend prepass: compute per-token trend returns so we can pick the best side.
+            pm_trend_ret_by_token: dict[str, float | None] = {}
+            best_token_by_group: dict[str, str] = {}
+            group_has_open_pos: set[str] = set()
+            if cfg.strategy_mode == "pm_trend" and pm_trend_engine is not None:
+                # Mark groups that already have an open position in either side.
+                try:
+                    for ctx in ctxs:
+                        g = str(ctx.get("auto_side_group") or "").strip()
+                        if not g:
+                            continue
+                        tok = str(ctx.get("token_id") or "").strip()
+                        if not tok:
+                            continue
+                        pos = paper_positions.get(tok)
+                        if pos is None:
+                            continue
+                        try:
+                            if float(pos.get("shares") or 0.0) > 0:
+                                group_has_open_pos.add(g)
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+
+                # Compute trend return for each token.
+                for ctx in ctxs:
+                    tok = str(ctx.get("token_id") or "").strip()
+                    if not tok:
+                        continue
+                    ob = orderbook_by_token.get(tok)
+                    if not isinstance(ob, dict):
+                        pm_trend_ret_by_token[tok] = None
+                        continue
+                    try:
+                        b, a = best_bid_ask(ob)
+                        if b is None or a is None or float(b) <= 0 or float(a) <= 0:
+                            pm_trend_ret_by_token[tok] = None
+                            continue
+                        pm_mid0 = (float(b) + float(a)) / 2.0
+                    except Exception:
+                        pm_trend_ret_by_token[tok] = None
+                        continue
+
+                    try:
+                        snap_tr = pm_trend_engine.update_and_compute(
+                            key=f"tok:{tok}",
+                            ts=ts_dt,
+                            pm_mid_price=float(pm_mid0),
+                            lookback_points=int(cfg.pm_trend_lookback_points),
+                        )
+                        pm_trend_ret_by_token[tok] = float(snap_tr.pm_ret_pct) if snap_tr is not None else None
+                    except Exception:
+                        pm_trend_ret_by_token[tok] = None
+
+                # Pick best token per group (max positive return).
+                for ctx in ctxs:
+                    g = str(ctx.get("auto_side_group") or "").strip()
+                    if not g:
+                        continue
+                    tok = str(ctx.get("token_id") or "").strip()
+                    if not tok:
+                        continue
+                    ret = pm_trend_ret_by_token.get(tok)
+                    if ret is None:
+                        continue
+                    if tok not in best_token_by_group:
+                        best_token_by_group[g] = tok
+                        continue
+                    cur = best_token_by_group.get(g)
+                    cur_ret = pm_trend_ret_by_token.get(str(cur)) if cur else None
+                    if cur_ret is None or float(ret) > float(cur_ret):
+                        best_token_by_group[g] = tok
+
             for ctx in ctxs:
                 market_name = str(ctx.get("market_name") or "market")
                 token_id = str(ctx.get("token_id") or "").strip()
@@ -2785,7 +2962,7 @@ def write_outputs(  # pyright: ignore
                 else:
                     pm_mid = None
 
-                if pm_mid is None or not (spot_price == spot_price):
+                if pm_mid is None or (cfg.strategy_mode != "pm_trend" and not (spot_price == spot_price)):
                     append_csv_row(
                         p_pm_paper_candidates,
                         [
@@ -2835,53 +3012,72 @@ def write_outputs(  # pyright: ignore
                     continue
 
                 # Freshness gating (safety): if last successful tick is too old, do not trade.
-                spot_age = (ts_dt - spot_ts_by_pair.get(pair, ts_dt)).total_seconds()
-                # pm_mid is computed this tick; treat as age 0 when we got it.
-                pm_age = 0.0
-                is_fresh = (spot_age <= cfg.freshness_max_age_s) and (pm_age <= cfg.freshness_max_age_s)
+                if cfg.strategy_mode == "pm_trend":
+                    # pm_mid is computed this tick; treat as age 0.
+                    pm_age = 0.0
+                    is_fresh = pm_age <= cfg.freshness_max_age_s
+                else:
+                    spot_age = (ts_dt - spot_ts_by_pair.get(pair, ts_dt)).total_seconds()
+                    # pm_mid is computed this tick; treat as age 0 when we got it.
+                    pm_age = 0.0
+                    is_fresh = (spot_age <= cfg.freshness_max_age_s) and (pm_age <= cfg.freshness_max_age_s)
 
-                # Update lead-lag history and compute edge
                 ll_key = f"{market_name}:{token_id}:{pair}"
 
-                snap = lead_lag_engine.update_and_compute(
-                    key=ll_key,
-                    ts=ts_dt,
-                    spot_price=spot_price,
-                    pm_mid_price=float(pm_mid),
-                    lookback_points=int(cfg.lead_lag_lookback_points),
-                )
-
-                # Estimate PM lag behind spot (observability).
                 lag_ms: float | None = None
-                try:
-                    # Use a lower min_points so the portal shows a lag estimate sooner after restart.
-                    # Keep it >= 6 so correlation has enough samples to be meaningful.
-                    est = lead_lag_engine.estimate_market_lag(key=ll_key, min_points=6)
-                    # Only treat lag as available when the estimate is OK.
-                    # If we already saw an OK estimate earlier in this tick, do not overwrite it with a later failure.
-                    if est.ok:
-                        live_status["market_lag_reason"] = est.reason
-                        live_status["market_lag_points"] = int(est.lag_points) if est.lag_points is not None else None
-                        live_status["market_lag_confidence"] = float(abs(est.best_corr)) if est.best_corr is not None else None
-                        if est.lag_ms is not None:
-                            lag_ms = float(est.lag_ms)
-                            live_status.setdefault("market_lag_ms_samples", [])
-                            cast(list[Any], live_status["market_lag_ms_samples"]).append(float(est.lag_ms))
-                    else:
-                        if live_status.get("market_lag_reason") is None:
-                            live_status["market_lag_reason"] = est.reason
-                            live_status["market_lag_points"] = int(est.lag_points) if est.lag_points is not None else None
-                            live_status["market_lag_confidence"] = float(abs(est.best_corr)) if est.best_corr is not None else None
-                except Exception:
-                    pass
-
                 spot_ret = None
                 pm_ret = None
                 edge_pct = None
-                if snap is not None:
-                    spot_ret = float(snap.spot_ret_pct)
-                    pm_ret = float(snap.pm_ret_pct)
-                    edge_pct = float(LeadLagEngine.compute_edge_for_side(side=cfg.lead_lag_side, snap=snap))
+
+                if cfg.strategy_mode == "pm_trend":
+                    pm_ret = None
+                    edge_pct = None
+                    try:
+                        pm_ret_any = pm_trend_ret_by_token.get(token_id)
+                        if pm_ret_any is not None:
+                            pm_ret = float(pm_ret_any)
+                            edge_pct = float(pm_ret)
+                    except Exception:
+                        pm_ret = None
+                        edge_pct = None
+                else:
+                    # Lead-lag: update history and compute edge
+                    if lead_lag_engine is not None:
+                        snap = lead_lag_engine.update_and_compute(
+                            key=ll_key,
+                            ts=ts_dt,
+                            spot_price=spot_price,
+                            pm_mid_price=float(pm_mid),
+                            lookback_points=int(cfg.lead_lag_lookback_points),
+                        )
+
+                        # Estimate PM lag behind spot (observability).
+                        try:
+                            # Use a lower min_points so the portal shows a lag estimate sooner after restart.
+                            # Keep it >= 6 so correlation has enough samples to be meaningful.
+                            est = lead_lag_engine.estimate_market_lag(key=ll_key, min_points=6)
+                            # Only treat lag as available when the estimate is OK.
+                            # If we already saw an OK estimate earlier in this tick, do not overwrite it with a later failure.
+                            if est.ok:
+                                live_status["market_lag_reason"] = est.reason
+                                live_status["market_lag_points"] = int(est.lag_points) if est.lag_points is not None else None
+                                live_status["market_lag_confidence"] = float(abs(est.best_corr)) if est.best_corr is not None else None
+                                if est.lag_ms is not None:
+                                    lag_ms = float(est.lag_ms)
+                                    live_status.setdefault("market_lag_ms_samples", [])
+                                    cast(list[Any], live_status["market_lag_ms_samples"]).append(float(est.lag_ms))
+                            else:
+                                if live_status.get("market_lag_reason") is None:
+                                    live_status["market_lag_reason"] = est.reason
+                                    live_status["market_lag_points"] = int(est.lag_points) if est.lag_points is not None else None
+                                    live_status["market_lag_confidence"] = float(abs(est.best_corr)) if est.best_corr is not None else None
+                        except Exception:
+                            pass
+
+                        if snap is not None:
+                            spot_ret = float(snap.spot_ret_pct)
+                            pm_ret = float(snap.pm_ret_pct)
+                            edge_pct = float(LeadLagEngine.compute_edge_for_side(side=cfg.lead_lag_side, snap=snap))
 
                 # Always write an edge row per market when we have enough history
                 if edge_pct is not None:
@@ -2892,8 +3088,12 @@ def write_outputs(  # pyright: ignore
                             "fair_p": 0.0,
                             "pm_price": float(pm_mid),
                             "edge": float(edge_pct),
-                            "sources": "kraken_spot+pm_clob",
-                            "notes": f"lead_lag side={cfg.lead_lag_side} pair={pair} spot_ret={spot_ret:.4f}% pm_ret={pm_ret:.4f}%",
+                            "sources": "pm_clob" if cfg.strategy_mode == "pm_trend" else "kraken_spot+pm_clob",
+                            "notes": (
+                                f"pm_trend lookback={cfg.pm_trend_lookback_points} pm_ret={pm_ret:.4f}%"
+                                if cfg.strategy_mode == "pm_trend" and pm_ret is not None
+                                else f"lead_lag side={cfg.lead_lag_side} pair={pair} spot_ret={spot_ret:.4f}% pm_ret={pm_ret:.4f}%"
+                            ),
                         }
                     )
 
@@ -3119,34 +3319,45 @@ def write_outputs(  # pyright: ignore
                 except Exception:
                     spread_cost_pct = None
 
-                # Adaptive spot move threshold: require spot move > recent noise and > spread cost proxy.
-                spot_noise_pct: float | None = None
-                try:
-                    spot_noise_pct = lead_lag_engine.estimate_spot_noise_pct(
-                        key=ll_key,
-                        window_points=int(cfg.lead_lag_spot_noise_window_points),
-                        min_points=10,
-                    )
-                except Exception:
+                # Move gating
+                if cfg.strategy_mode == "pm_trend":
+                    # PM-only: require the chosen token's mid-price to be trending up.
                     spot_noise_pct = None
-
-                spot_move_min_dyn = float(cfg.lead_lag_spot_move_min_pct)
-                if spot_noise_pct is not None:
-                    spot_move_min_dyn = max(spot_move_min_dyn, float(cfg.lead_lag_spot_noise_mult) * float(spot_noise_pct))
-                if spread_cost_pct is not None:
-                    spot_move_min_dyn = max(spot_move_min_dyn, float(cfg.lead_lag_spread_move_mult) * float(spread_cost_pct))
-
-                # Surface the current adaptive threshold in live_status (last processed market).
-                live_status["lead_lag_spot_move_min_pct_dynamic"] = float(spot_move_min_dyn)
-                live_status["lead_lag_spot_noise_pct"] = float(spot_noise_pct) if spot_noise_pct is not None else None
-                live_status["lead_lag_spread_cost_pct"] = float(spread_cost_pct) if spread_cost_pct is not None else None
-
-                # Entry direction gating based on side
-                if cfg.lead_lag_side == "YES":
-                    spot_move_ok = spot_ret is not None and float(spot_ret) >= float(spot_move_min_dyn)
+                    spot_move_min_dyn = float(cfg.pm_trend_move_min_pct)
+                    live_status["lead_lag_spot_move_min_pct_dynamic"] = None
+                    live_status["lead_lag_spot_noise_pct"] = None
+                    live_status["lead_lag_spread_cost_pct"] = float(spread_cost_pct) if spread_cost_pct is not None else None
+                    spot_move_ok = edge_pct is not None and float(edge_pct) >= float(spot_move_min_dyn)
                 else:
-                    # NO: spot down should be a positive move
-                    spot_move_ok = spot_ret is not None and (-float(spot_ret)) >= float(spot_move_min_dyn)
+                    # Adaptive spot move threshold: require spot move > recent noise and > spread cost proxy.
+                    spot_noise_pct: float | None = None
+                    try:
+                        if lead_lag_engine is not None:
+                            spot_noise_pct = lead_lag_engine.estimate_spot_noise_pct(
+                                key=ll_key,
+                                window_points=int(cfg.lead_lag_spot_noise_window_points),
+                                min_points=10,
+                            )
+                    except Exception:
+                        spot_noise_pct = None
+
+                    spot_move_min_dyn = float(cfg.lead_lag_spot_move_min_pct)
+                    if spot_noise_pct is not None:
+                        spot_move_min_dyn = max(spot_move_min_dyn, float(cfg.lead_lag_spot_noise_mult) * float(spot_noise_pct))
+                    if spread_cost_pct is not None:
+                        spot_move_min_dyn = max(spot_move_min_dyn, float(cfg.lead_lag_spread_move_mult) * float(spread_cost_pct))
+
+                    # Surface the current adaptive threshold in live_status (last processed market).
+                    live_status["lead_lag_spot_move_min_pct_dynamic"] = float(spot_move_min_dyn)
+                    live_status["lead_lag_spot_noise_pct"] = float(spot_noise_pct) if spot_noise_pct is not None else None
+                    live_status["lead_lag_spread_cost_pct"] = float(spread_cost_pct) if spread_cost_pct is not None else None
+
+                    # Entry direction gating based on side
+                    if cfg.lead_lag_side == "YES":
+                        spot_move_ok = spot_ret is not None and float(spot_ret) >= float(spot_move_min_dyn)
+                    else:
+                        # NO: spot down should be a positive move
+                        spot_move_ok = spot_ret is not None and (-float(spot_ret)) >= float(spot_move_min_dyn)
 
                 # Exit signals
                 hold_secs = 0.0
@@ -3168,13 +3379,19 @@ def write_outputs(  # pyright: ignore
                 exit_ok = False
                 exit_reason = ""
                 if in_pos:
-                    if float(edge_pct) <= float(cfg.lead_lag_edge_exit_pct):
-                        exit_ok = True
-                        exit_reason = "edge_exit"
-                    elif hold_secs >= float(cfg.lead_lag_max_hold_secs):
+                    if cfg.strategy_mode == "pm_trend":
+                        if float(edge_pct) <= float(cfg.pm_trend_exit_move_min_pct):
+                            exit_ok = True
+                            exit_reason = "trend_gone"
+                    else:
+                        if float(edge_pct) <= float(cfg.lead_lag_edge_exit_pct):
+                            exit_ok = True
+                            exit_reason = "edge_exit"
+
+                    if (not exit_ok) and hold_secs >= float(cfg.lead_lag_max_hold_secs):
                         exit_ok = True
                         exit_reason = "max_hold"
-                    elif cfg.lead_lag_pm_stop_pct and float(cfg.lead_lag_pm_stop_pct) > 0:
+                    elif (not exit_ok) and cfg.lead_lag_pm_stop_pct and float(cfg.lead_lag_pm_stop_pct) > 0:
                         entry_price = float(pos.get("avg_entry") or pm_mid)
                         pm_move_pct = (float(pm_mid) / max(entry_price, 1e-12) - 1.0) * 100.0
                         if pm_move_pct <= -abs(float(cfg.lead_lag_pm_stop_pct)):
@@ -3192,12 +3409,34 @@ def write_outputs(  # pyright: ignore
                 enter_ok = bool(enter_raw)
                 enter_block_reason = ""
 
+                # PM-trend auto-side gate: only allow entry on the best side per market group.
+                auto_side_reason = ""
+                try:
+                    if cfg.strategy_mode == "pm_trend" and bool(cfg.pm_trend_auto_side):
+                        g = str(ctx.get("auto_side_group") or "").strip()
+                        if g:
+                            if (not in_pos) and g in group_has_open_pos:
+                                enter_ok = False
+                                auto_side_reason = "other_side_open"
+                            elif not in_pos:
+                                best_tok = best_token_by_group.get(g)
+                                if best_tok and str(best_tok) != str(token_id):
+                                    enter_ok = False
+                                    auto_side_reason = "not_best_side"
+                                elif not best_tok:
+                                    # No best token yet (e.g. not enough history); don't enter.
+                                    enter_ok = False
+                                    auto_side_reason = "no_best_side"
+                except Exception:
+                    pass
+
                 # Gate 1: estimated market lag must be large enough (optional; only blocks when lag is known)
                 try:
-                    if enter_ok and float(cfg.lead_lag_min_market_lag_ms) > 0 and lag_ms is not None:
-                        if float(lag_ms) < float(cfg.lead_lag_min_market_lag_ms):
-                            enter_ok = False
-                            enter_block_reason = "lag_too_short"
+                    if cfg.strategy_mode != "pm_trend":
+                        if enter_ok and float(cfg.lead_lag_min_market_lag_ms) > 0 and lag_ms is not None:
+                            if float(lag_ms) < float(cfg.lead_lag_min_market_lag_ms):
+                                enter_ok = False
+                                enter_block_reason = "lag_too_short"
                 except Exception:
                     pass
 
@@ -3362,8 +3601,10 @@ def write_outputs(  # pyright: ignore
                     execution_status = "TRIGGERED"
                     reason = "scale_in"
                 else:
-                    if not spot_move_ok:
-                        reason = "spot_move_too_small"
+                    if auto_side_reason:
+                        reason = auto_side_reason
+                    elif not spot_move_ok:
+                        reason = "trend_move_too_small" if cfg.strategy_mode == "pm_trend" else "spot_move_too_small"
                     elif float(edge_pct) < float(cfg.lead_lag_edge_min_pct):
                         reason = "low_edge"
                     elif enter_block_reason:
@@ -3455,7 +3696,10 @@ def write_outputs(  # pyright: ignore
                             "last_mid": float(pm_mid),
                         }
                         paper_cash -= notional
-                        paper_notes = f"lead_lag edge={edge_pct:.4f}% max_usdc={max_usdc:.2f}" if max_usdc is not None else f"lead_lag edge={edge_pct:.4f}%"
+                        if cfg.strategy_mode == "pm_trend":
+                            paper_notes = f"pm_trend pm_ret={edge_pct:.4f}% max_usdc={max_usdc:.2f}" if max_usdc is not None else f"pm_trend pm_ret={edge_pct:.4f}%"
+                        else:
+                            paper_notes = f"lead_lag edge={edge_pct:.4f}% max_usdc={max_usdc:.2f}" if max_usdc is not None else f"lead_lag edge={edge_pct:.4f}%"
 
                     append_csv_row(
                         p_pm_orders,
@@ -3482,7 +3726,11 @@ def write_outputs(  # pyright: ignore
                     paper_realized += (float(fill_price) - float(avg_entry)) * float(shares_to_sell)
                     paper_positions.pop(token_id, None)
 
-                    notes = f"lead_lag exit={exit_reason} edge={edge_pct:.4f}%"
+                    notes = (
+                        f"pm_trend exit={exit_reason} pm_ret={edge_pct:.4f}%"
+                        if cfg.strategy_mode == "pm_trend"
+                        else f"lead_lag exit={exit_reason} edge={edge_pct:.4f}%"
+                    )
                     append_csv_row(
                         p_pm_orders,
                         ["ts", "market", "side", "token", "price", "size", "status", "tx_id", "notes"],
@@ -3532,8 +3780,9 @@ def write_outputs(  # pyright: ignore
                             "last_mid": float(pm_mid),
                         }
                         paper_cash -= notional
+                        mode_tag = "pm_trend" if cfg.strategy_mode == "pm_trend" else "lead_lag"
                         paper_notes = (
-                            f"lead_lag scale_in pm_up_move={pm_up_move_pct:.3f}% edge={edge_pct:.4f}%"
+                            f"{mode_tag} scale_in pm_up_move={pm_up_move_pct:.3f}% edge={edge_pct:.4f}%"
                             + (f" max_usdc={scale_max_usdc:.2f}" if scale_max_usdc is not None else "")
                         )
 
@@ -5462,6 +5711,10 @@ def main() -> None:
     if cfg.strategy_mode == "lead_lag":
         lead_lag_engine = LeadLagEngine()
 
+    pm_trend_engine: PmTrendEngine | None = None
+    if cfg.strategy_mode == "pm_trend":
+        pm_trend_engine = PmTrendEngine()
+
     health_tracker = LeadLagHealthTracker() if cfg.strategy_mode == "lead_lag" else None
     latency_tracker = LatencyTracker()
     runtime_cache = RuntimeCache()
@@ -5613,6 +5866,7 @@ def main() -> None:
                     pm=pm,
                     kraken=kraken,
                     lead_lag_engine=lead_lag_engine,
+                    pm_trend_engine=pm_trend_engine,
                     health_tracker=health_tracker,
                     latency_tracker=latency_tracker,
                     runtime_cache=runtime_cache,

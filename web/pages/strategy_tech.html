@@ -6,17 +6,17 @@
   <div class="card">
     <h4>Datakällor</h4>
     <ul>
-      <li>Spotmarknad (snabb referens)</li>
-      <li>Orderbok (likviditet och prisnivåer)</li>
-      <li>Prissättning i den långsammare marknaden</li>
+      <li>Polymarket CLOB: orderbok (bid/ask, likviditet, prisnivåer)</li>
+      <li>Polymarket Gamma: market discovery + token-id för YES/NO (för auto-sida)</li>
+      <li>Intern trend-motor: rullande mid-historik per token</li>
     </ul>
   </div>
   <div class="card">
-    <h4>Lead–lag på hög nivå</h4>
+    <h4>Trend på hög nivå (pm_trend)</h4>
     <ul>
-      <li>En marknad fungerar som “ledare”</li>
-      <li>Den andra marknaden släpar efter</li>
-      <li>Systemet agerar endast när edge är tydlig</li>
+      <li>Identifierar när en token börjar trenda upp</li>
+      <li>Väljer sida (YES/NO) automatiskt per marknad</li>
+      <li>Agerar endast när trend + kostnadsgates är OK</li>
     </ul>
   </div>
 </div>
@@ -40,9 +40,10 @@
       <p class="muted">Exempel på filer som portalen kan visa:</p>
       <ul>
         <li><span class="mono">live_status.json</span> – systemstatus och senaste loop</li>
-        <li><span class="mono">edge_signals_live.csv</span> – edge-observationer över tid</li>
+        <li><span class="mono">edge_signals_live.csv</span> – observationer (trend/edge) över tid</li>
         <li><span class="mono">pm_paper_portfolio.json</span> – paper-saldo och sammanfattning</li>
         <li><span class="mono">pm_paper_positions.csv</span> / <span class="mono">pm_paper_trades.csv</span> – positioner och trades (paper)</li>
+        <li><span class="mono">pm_paper_candidates.csv</span> – decision + reason per kandidat i tick</li>
       </ul>
     </div>
   </div>

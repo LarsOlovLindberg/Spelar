@@ -15,7 +15,7 @@
     <h4>När systemet avstår handel</h4>
     <ul>
       <li>När likviditeten är för låg</li>
-      <li>När marknaderna redan är synkade</li>
+      <li>När trenden är för svag eller saknas</li>
       <li>När data är för gammal eller osäker</li>
     </ul>
   </div>
@@ -49,10 +49,10 @@
     <ul>
       <li><strong>Skalar position efter likviditet</strong>: systemet cap:ar orderstorleken till en andel av “synlig band-likviditet” i orderboken (inte ett fast belopp).</li>
       <li><strong>Avstår när storleken blir för liten</strong>: om cap:ad storlek blir &lt; <span class="mono">LEAD_LAG_MIN_TRADE_NOTIONAL_USDC</span> blir beslutet <em>skip</em> (reason: <span class="mono">insufficient_liquidity</span>).</li>
-      <li><strong>Hårdare krav efter kostnader</strong>: edge måste överleva spread + fees (via <span class="mono">LEAD_LAG_NET_EDGE_MIN_PCT</span> och spread-cap).</li>
+      <li><strong>Hårdare krav efter kostnader</strong>: trend/edge måste överleva spread + fees (via <span class="mono">LEAD_LAG_NET_EDGE_MIN_PCT</span> och spread-cap).</li>
       <li><strong>Kort exponering</strong>: max hold + exit-regler gör att systemet inte “fastnar” i tunn bok.</li>
     </ul>
-    <p class="muted">Praktiskt betyder det: vi försöker inte filtrera bort låg volym helt; vi gör den spelbar i små storlekar och bara när edgen är robust efter kostnader.</p>
+    <p class="muted">Praktiskt betyder det: vi försöker inte filtrera bort låg volym helt; vi gör den spelbar i små storlekar och bara när trenden är robust efter kostnader.</p>
   </div>
 </div>
 

@@ -1,47 +1,45 @@
 <h2>Om strategin</h2>
 
-<p><strong>Idén är enkel:</strong> ibland hinner priset på en marknad ändras innan en annan marknad “hänger med”. Den tillfälliga skillnaden kallar vi en <em>edge</em>.</p>
+<p><strong>Idén är enkel:</strong> vi handlar <em>trend i Polymarket-priset</em> – utan extern referens. När en outcome-token börjar röra sig uppåt (tillräckligt snabbt) antar vi att rörelsen kan fortsätta en bit, går in tidigt, kan skala in om trenden fortsätter, och går ut när trenden är borta.</p>
 
 <div class="grid">
   <div class="card">
-    <h4>Vad en edge är</h4>
-    <p class="muted">En edge är en temporär prisskillnad mellan två platser där samma sak värderas.</p>
+    <h4>Vad vi mäter</h4>
+    <p class="muted">Allt bygger på Polymarket CLOB (orderbok) – best bid/ask och mid.</p>
     <ul>
-      <li>Den kan vara liten</li>
-      <li>Den kan vara kortvarig</li>
-      <li>Den kan försvinna snabbt när marknaderna synkar</li>
+      <li><strong>pm_mid</strong>: (bid+ask)/2 för token</li>
+      <li><strong>pm_ret_pct</strong>: % rörelse över ett kort fönster</li>
+      <li><strong>spread_cost_pct</strong> &amp; fees: uppskattade kostnader</li>
     </ul>
   </div>
   <div class="card">
-    <h4>Så systemet arbetar</h4>
+    <h4>Så systemet agerar</h4>
     <ul>
-      <li>Identifierar när en snabb marknad leder</li>
-      <li>Går in i en långsammare marknad</li>
-      <li>Lämnar när marknaderna är i synk igen</li>
+      <li>Identifierar när token börjar trenda upp</li>
+      <li>Väljer sida automatiskt (YES/NO) per marknad</li>
+      <li>Går ut när trenden avtar (eller via stop/max hold)</li>
     </ul>
   </div>
 </div>
 
 <h3>Viktiga förtydliganden</h3>
 <ul>
-  <li>Ingen exponering mot slututfall</li>
-  <li>Ingen “håll till slutet”-logik</li>
-  <li>Fokus är tidsbegränsad edge, inte prognoser</li>
+  <li>Ingen extern referens: <strong>ingen Kraken/spot</strong> i besluten</li>
+  <li>Ingen “håll till slutet”-logik: positioner är tänkta att vara korta</li>
+  <li>Vi handlar prisrörelse i tokens – det innebär exponering medan positionen är öppen</li>
 </ul>
 
-<p class="muted">Tänk “eftersläpning”: som när en skylt på motorvägen uppdateras någon sekund efter att GPS:en redan visat avfarten.</p>
-
-<h3>Exakt strategi (lead–lag, microstructure)</h3>
-<p><strong>Syfte:</strong> utnyttja att ett snabbare referenspris ibland rör sig före Polymarket CLOB (orderboken) och att PM-priset då kan “släpa”. Systemet försöker <em>inte</em> förutsäga slututfall; det försöker fånga kortvariga prisjusteringar.</p>
+<h3>Exakt strategi (pm_trend)</h3>
+<p><strong>Syfte:</strong> haka på en påbörjad trend i Polymarket-priset med strikt riskkontroll. Vi försöker inte förutsäga slututfall; vi försöker handla <em>rörelsen</em>.</p>
 
 <div class="grid">
   <div class="card" style="grid-column: span 12;">
     <h4>Inputs (per marknad)</h4>
     <ul>
-      <li><strong>Lead</strong>: referenspris (spot) för ett par (t.ex. <span class="mono">XBTUSD</span>).</li>
-      <li><strong>Lag</strong>: Polymarket CLOB best bid/ask och mid för en outcome-token.</li>
+      <li><strong>Pris</strong>: Polymarket CLOB best bid/ask och mid för en outcome-token.</li>
       <li><strong>Tid</strong>: tick-loop (typiskt var <span class="mono">INTERVAL_S</span> sekund).</li>
-      <li><strong>Konfig</strong>: thresholds/gates via env (t.ex. <span class="mono">LEAD_LAG_*</span>, <span class="mono">FRESHNESS_MAX_AGE_SECS</span>).</li>
+      <li><strong>Trend</strong>: rullande mid-historik och % rörelse över <span class="mono">PM_TREND_LOOKBACK_POINTS</span>.</li>
+      <li><strong>Auto-sida</strong>: jämför YES och NO inom samma marknad och väljer den sida som trendar bäst (<span class="mono">PM_TREND_AUTO_SIDE</span>).</li>
     </ul>
   </div>
 </div>
@@ -50,19 +48,19 @@
   <div class="card">
     <h4>Definitioner</h4>
     <ul>
-      <li><strong>spot_ret_pct</strong>: procentuell spot-rörelse över ett kort fönster (N punkter).</li>
-      <li><strong>pm_ret_pct</strong>: motsvarande rörelse för PM mid.</li>
-      <li><strong>edge_pct</strong>: skillnaden mellan spot och PM i procentenheter.</li>
+      <li><strong>pm_ret_pct</strong>: procentuell rörelse för PM mid över ett kort fönster.</li>
+      <li><strong>edge_pct</strong>: i <span class="mono">pm_trend</span> är edge samma sak som <strong>pm_ret_pct</strong> (trendstyrka).</li>
       <li><strong>spread_cost_pct</strong>: uppskattad kostnad i procentenheter från half-spread (entry vs mid).</li>
       <li><strong>fees_pct</strong>: uppskattad fee + extra cost (konfig) i procentenheter.</li>
       <li><strong>net_edge_pct</strong> = edge_pct − spread_cost_pct − fees_pct.</li>
     </ul>
   </div>
   <div class="card">
-    <h4>Signalriktning (YES/NO)</h4>
+    <h4>Auto-sida (YES/NO)</h4>
     <ul>
-      <li><strong>YES</strong>: edge följer spot upp (edge ≈ spot_ret − pm_ret).</li>
-      <li><strong>NO</strong>: en nedgång i spot behandlas som “positiv rörelse” (edge ≈ (−spot_ret) − pm_ret).</li>
+      <li>Systemet skapar en kandidat för <strong>YES</strong> och en för <strong>NO</strong> (om marknaden är tvåsidig).</li>
+      <li>Det väljer <em>en</em> sida att handla: den med bäst trend (högst <strong>pm_ret_pct</strong>).</li>
+      <li>Det kan inte gå in i båda sidor samtidigt för samma marknad (reason t.ex. <span class="mono">not_best_side</span> / <span class="mono">other_side_open</span>).</li>
     </ul>
   </div>
 </div>
@@ -73,29 +71,27 @@
     <pre class="mono" style="white-space:pre-wrap;line-height:1.35;">
 for each market:
   1) fetch PM orderbook (bid/ask/mid)
-  2) fetch spot/reference price (cached per pair per tick)
-  3) update rolling history and compute:
-       spot_ret_pct, pm_ret_pct, edge_pct
-  4) compute spread_cost_pct from PM bid/ask
-  5) compute adaptive move threshold:
-       move_min_dyn = max(
-         base_move_min,
-         noise_mult * spot_noise_std,
-         spread_move_mult * spread_cost_pct
-       )
-  6) entry precondition:
-       spot_move_ok AND edge_pct >= LEAD_LAG_EDGE_MIN_PCT
-  7) quality gates (after-cost & microstructure):
-       - lag gate (optional): if lag estimate exists, require lag_ms >= LEAD_LAG_MIN_MARKET_LAG_MS
+  2) update rolling history and compute:
+    pm_ret_pct over PM_TREND_LOOKBACK_POINTS
+    edge_pct = pm_ret_pct
+  3) compute spread_cost_pct from PM bid/ask
+  4) (optional) auto-side selection (PM_TREND_AUTO_SIDE):
+    - compare YES vs NO trend and pick best side
+  5) entry precondition:
+    edge_pct >= PM_TREND_MOVE_MIN_PCT
+  6) quality gates (after-cost & microstructure):
        - spread gate: spread_cost_pct <= LEAD_LAG_SPREAD_COST_CAP_PCT
        - net edge gate: net_edge_pct >= LEAD_LAG_NET_EDGE_MIN_PCT
        - liquidity gate: cap size by visible band liquidity (ask..ask+slippage_cap)
        - min notional: require max_usdc >= LEAD_LAG_MIN_TRADE_NOTIONAL_USDC
        - throttle: max orders per tick
-  8) if enter_ok: place a paper buy/sell (or log decision)
-  9) if in position: exit on edge fade / stop / max hold
+  7) if enter_ok: paper BUY (outcome token) and start tracking position
+  8) if in position:
+    - scale in when price moves in our favor
+    - exit when trend fades: edge_pct <= PM_TREND_EXIT_MOVE_MIN_PCT
+    - plus stop / max hold
     </pre>
-    <p class="muted">Obs: systemet loggar alltid beslut och skäl i snapshots så att man kan granska i efterhand.</p>
+    <p class="muted">Obs: flera risk-gates råkar fortfarande heta <span class="mono">LEAD_LAG_*</span> (legacy prefix), men de används även i <span class="mono">pm_trend</span> som generella kostnads-/likviditetsfilter.</p>
   </div>
 </div>
 
@@ -113,7 +109,7 @@ for each market:
   <div class="card">
     <h4>Var man ser att det funkar</h4>
     <ul>
-      <li><span class="mono">edge_calculator_live.csv</span>: rå edge, spread, fees, net edge + <em>reason</em>.</li>
+      <li><span class="mono">edge_calculator_live.csv</span>: trend/edge, spread/fees, net edge + <em>reason</em>.</li>
       <li><span class="mono">pm_paper_candidates.csv</span>: per marknad: decision + reason (varför det blev trade/skip).</li>
       <li><span class="mono">pm_paper_trades.csv</span>: paper fills/skips.</li>
       <li><span class="mono">live_status.json</span>: gates, latens, och senaste tick-status.</li>

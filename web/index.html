@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>spelar.eu</title>
-  <meta name="description" content="Systematisk, riskkontrollerad handel baserad på tillfälliga marknadsskillnader." />
+  <meta name="description" content="Systematisk, riskkontrollerad trendhandel på Polymarket." />
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1358,8 +1358,10 @@
       const r = String(reason || "").trim();
       if (!r) return "";
       const map = {
-        // lead-lag / edge_calculator_live.csv
-        "spot_move_too_small": "Move too small",
+        // strategy / edge_calculator_live.csv
+        // NOTE: some keys are legacy; keep aliases for older files.
+        "spot_move_too_small": "Trend too small",
+        "trend_move_too_small": "Trend too small",
         "low_edge": "Edge too low",
         "net_edge_too_low": "Net edge too low",
         "spread_too_high": "Spread too high",
@@ -1370,8 +1372,12 @@
         "stale_or_warmup": "Stale/Warmup",
         "avoid_price_zone": "Price filtered",
         "avoid_price_zone_executable": "Price filtered (executable)",
+        "other_side_open": "Other side already open",
+        "not_best_side": "Not best side",
+        "no_best_side": "No best side",
         "hold": "Holding",
         "enter": "Entered",
+        "trend_gone": "Exit (trend gone)",
         "edge_exit": "Exit (edge faded)",
         "max_hold": "Exit (max hold)",
         "stop": "Exit (stop)",
@@ -1851,9 +1857,9 @@
                     <div class="sub">Antal i market map</div>
                   </div>
                   <div class="cc-fact cc-fact-lag">
-                    <div class="label">Market lag</div>
+                    <div class="label">Market lag (om finns)</div>
                     <div class="value mono">${escapeHtml(lagStr)}</div>
-                    <div class="sub">Hur långt efter marknaden</div>
+                    <div class="sub">Kan vara N/A i pm_trend</div>
                   </div>
                   <div class="cc-fact cc-fact-latency">
                     <div class="label">System latency</div>
@@ -1930,7 +1936,7 @@
           );
           attachTip(
             ".cc-fact-lag",
-            `Market lag\nKommer från ${liveFile}: fält market_lag_ms.\nTolkning: hur långt efter marknadsdata systemet ligger just nu.`
+            `Market lag\nKommer från ${liveFile}: fält market_lag_ms.\nTolkning: hur långt efter marknadsdata systemet ligger just nu.\nNot: kan saknas/N/A i pm_trend.`
           );
           attachTip(
             ".cc-fact-latency",
@@ -2067,6 +2073,13 @@
           const maxOrders = obj?.pm_max_orders_per_tick ?? obj?.max_orders_per_tick;
           const orderSize = obj?.pm_order_size_shares ?? obj?.order_size_shares;
 
+          // pm_trend params (preferred when present)
+          const trendLookback = tryParseNumber(obj?.pm_trend_lookback_points);
+          const trendMoveMin = tryParseNumber(obj?.pm_trend_move_min_pct);
+          const trendExitMoveMin = tryParseNumber(obj?.pm_trend_exit_move_min_pct);
+          const trendAutoSide = obj?.pm_trend_auto_side;
+          const hasTrendMeta = [trendLookback, trendMoveMin, trendExitMoveMin].some(Number.isFinite) || (trendAutoSide !== null && trendAutoSide !== undefined);
+
           const netEdgeMin = tryParseNumber(obj?.lead_lag_net_edge_min_pct);
           const spreadCap = tryParseNumber(obj?.lead_lag_spread_cost_cap_pct);
           const minLagMs = tryParseNumber(obj?.lead_lag_min_market_lag_ms);
@@ -2101,19 +2114,25 @@
                 <h4>Strategy mode</h4>
                 <div class="mono kpi">${escapeHtml(strategyMode)}</div>
                 ${hasGates ? `
-                  <p class="muted" style="margin-top:10px">Gates (lead–lag)</p>
+                  <p class="muted" style="margin-top:10px">Gates (strategy)</p>
                   <p class="muted">Net edge min: <span class="mono">${escapeHtml(Number.isFinite(netEdgeMin) ? `${netEdgeMin.toFixed(3)}%` : "–")}</span></p>
                   <p class="muted">Spread cap: <span class="mono">${escapeHtml(Number.isFinite(spreadCap) ? `${spreadCap.toFixed(3)}%` : "–")}</span></p>
-                  <p class="muted">Min lag: <span class="mono">${escapeHtml(Number.isFinite(minLagMs) ? `${Math.round(minLagMs)}ms` : "–")}</span></p>
+                  <p class="muted">Min market lag: <span class="mono">${escapeHtml(Number.isFinite(minLagMs) ? `${Math.round(minLagMs)}ms` : "–")}</span></p>
                   <p class="muted">Min notional: <span class="mono">${escapeHtml(Number.isFinite(minNotional) ? `$${fmt2(minNotional)}` : "–")}</span></p>
                 ` : ``}
-                ${hasMoveMeta ? `
-                  <p class="muted" style="margin-top:10px">Move threshold (adaptive)</p>
+                ${hasTrendMeta ? `
+                  <p class="muted" style="margin-top:10px">pm_trend parameters</p>
+                  <p class="muted">Lookback points: <span class="mono">${escapeHtml(Number.isFinite(trendLookback) ? String(Math.round(trendLookback)) : "–")}</span></p>
+                  <p class="muted">Move min: <span class="mono">${escapeHtml(Number.isFinite(trendMoveMin) ? `${trendMoveMin.toFixed(3)}%` : "–")}</span></p>
+                  <p class="muted">Exit move min: <span class="mono">${escapeHtml(Number.isFinite(trendExitMoveMin) ? `${trendExitMoveMin.toFixed(3)}%` : "–")}</span></p>
+                  <p class="muted">Auto side: <span class="mono">${escapeHtml((trendAutoSide === null || trendAutoSide === undefined) ? "–" : String(trendAutoSide))}</span></p>
+                ` : (hasMoveMeta ? `
+                  <p class="muted" style="margin-top:10px">Move meta (legacy)</p>
                   <p class="muted">Move min base: <span class="mono">${escapeHtml(Number.isFinite(moveBase) ? `${moveBase.toFixed(3)}%` : "–")}</span></p>
                   <p class="muted">Move min dyn: <span class="mono">${escapeHtml(Number.isFinite(moveDyn) ? `${moveDyn.toFixed(3)}%` : "–")}</span></p>
-                  <p class="muted">Spot noise (est): <span class="mono">${escapeHtml(Number.isFinite(noisePct) ? `${noisePct.toFixed(3)}%` : "–")}</span></p>
+                  <p class="muted">Noise (est): <span class="mono">${escapeHtml(Number.isFinite(noisePct) ? `${noisePct.toFixed(3)}%` : "–")}</span></p>
                   <p class="muted">Spread cost (half): <span class="mono">${escapeHtml(Number.isFinite(spreadCostPct) ? `${spreadCostPct.toFixed(3)}%` : "–")}</span></p>
-                ` : ``}
+                ` : ``))}
               </div>
               <div class="card">
                 <h4>Killswitch</h4>
@@ -2140,7 +2159,7 @@
         }
       }
 
-      // Lead-lag edge calculator
+      // Edge calculator
       const edgeCalcBlocks = Array.from(contentEl.querySelectorAll("[data-edge-calculator]"));
       for (const el of edgeCalcBlocks){
         const file = el.getAttribute("data-edge-calculator");

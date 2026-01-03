@@ -23,10 +23,10 @@
   </div>
 </div>
 
-<h3>Exempel på edge-observationer</h3>
+<h3>Exempel på observationer (trend/edge)</h3>
 <div class="grid">
   <div class="card" style="grid-column: span 12;">
-    <p class="muted">Det här är en tabell med senaste observationerna som ligger till grund för beslut.</p>
+    <p class="muted">Det här är en tabell med senaste observationerna som ligger till grund för beslut (i <span class="mono">pm_trend</span> är “edge” i praktiken trendstyrka).</p>
     <div data-csv="edge_signals_live.csv" data-max-rows="50"></div>
   </div>
 </div>
@@ -35,12 +35,12 @@
 <div class="grid">
   <div class="card" style="grid-column: span 8">
     <h4>Real-time Edge Calculator</h4>
-    <p class="muted">Brutto signal → spread → avgifter → netto. Trigger om netto > 0.</p>
+    <p class="muted">Brutto signal/trend → spread → avgifter → netto. Trigger när gates släpper igenom.</p>
     <div data-edge-calculator="edge_calculator_live.csv"></div>
   </div>
   <div class="card" style="grid-column: span 4">
-    <h4>Market Lag vs System Latency</h4>
-    <p class="muted">Grönt om systemet är snabbare än marknaden.</p>
+    <h4>Latens & freshness</h4>
+    <p class="muted">I <span class="mono">pm_trend</span> är market lag ofta N/A; viktigast är att tick och systemlatens är fräscha.</p>
     <div data-lag-latency="live_status.json"></div>
   </div>
 </div>
@@ -53,8 +53,8 @@
 </div>
 
 <div class="card" style="margin-top:16px">
-  <h4>Lead–lag health</h4>
-  <p class="muted">Rullande statistik: edge, net-edge, spread-cost, lag, likviditet, beslut och latens.</p>
+  <h4>Strategy health</h4>
+  <p class="muted">Rullande statistik: edge/net-edge/spread-cost/likviditet/beslut/latens. (Filnamnet kan vara historiskt.)</p>
   <div data-json="lead_lag_health.json"></div>
 </div>
 
@@ -81,8 +81,8 @@
     <h4>Hur tolkar man filerna?</h4>
     <ul>
       <li><span class="mono">live_status.json</span> – sammanfattning: trading mode (paper/live), parametrar och senaste timestamp.</li>
-      <li><span class="mono">lead_lag_health.json</span> – rullande “hälsa” för lead–lag: percentiler för edge/net-edge/spread/lag/likviditet + counts för reasons/status + latens.</li>
-      <li><span class="mono">edge_signals_live.csv</span> – senaste edge-observationer (signalnivå), som ligger till grund för beslut.</li>
+      <li><span class="mono">lead_lag_health.json</span> – rullande “hälsa” för strategin: percentiler för edge/net-edge/spread/likviditet + counts för reasons/status + latens.</li>
+      <li><span class="mono">edge_signals_live.csv</span> – senaste observationer (signalnivå), som ligger till grund för beslut.</li>
       <li><span class="mono">pm_paper_portfolio.json</span> – paper-portfölj: cash, equity och antal öppna positioner.</li>
       <li><span class="mono">pm_paper_positions.csv</span> – öppna paper-positioner per marknad/token.</li>
       <li><span class="mono">pm_paper_trades.csv</span> – senaste paper-trades (fyllda/skippade + orsak).</li>
