@@ -2115,23 +2115,23 @@
                 <div class="mono kpi">${escapeHtml(strategyMode)}</div>
                 ${hasGates ? `
                   <p class="muted" style="margin-top:10px">Gates (strategy)</p>
-                  <p class="muted">Net edge min: <span class="mono">${escapeHtml(Number.isFinite(netEdgeMin) ? `${netEdgeMin.toFixed(3)}%` : "–")}</span></p>
-                  <p class="muted">Spread cap: <span class="mono">${escapeHtml(Number.isFinite(spreadCap) ? `${spreadCap.toFixed(3)}%` : "–")}</span></p>
-                  <p class="muted">Min market lag: <span class="mono">${escapeHtml(Number.isFinite(minLagMs) ? `${Math.round(minLagMs)}ms` : "–")}</span></p>
-                  <p class="muted">Min notional: <span class="mono">${escapeHtml(Number.isFinite(minNotional) ? `$${fmt2(minNotional)}` : "–")}</span></p>
+                  <p class="muted">Net edge min: <span class="mono">${escapeHtml(Number.isFinite(netEdgeMin) ? (netEdgeMin.toFixed(3) + "%") : "–")}</span></p>
+                  <p class="muted">Spread cap: <span class="mono">${escapeHtml(Number.isFinite(spreadCap) ? (spreadCap.toFixed(3) + "%") : "–")}</span></p>
+                  <p class="muted">Min market lag: <span class="mono">${escapeHtml(Number.isFinite(minLagMs) ? (String(Math.round(minLagMs)) + "ms") : "–")}</span></p>
+                  <p class="muted">Min notional: <span class="mono">${escapeHtml(Number.isFinite(minNotional) ? ("$" + fmt2(minNotional)) : "–")}</span></p>
                 ` : ``}
                 ${hasTrendMeta ? `
                   <p class="muted" style="margin-top:10px">pm_trend parameters</p>
                   <p class="muted">Lookback points: <span class="mono">${escapeHtml(Number.isFinite(trendLookback) ? String(Math.round(trendLookback)) : "–")}</span></p>
-                  <p class="muted">Move min: <span class="mono">${escapeHtml(Number.isFinite(trendMoveMin) ? `${trendMoveMin.toFixed(3)}%` : "–")}</span></p>
-                  <p class="muted">Exit move min: <span class="mono">${escapeHtml(Number.isFinite(trendExitMoveMin) ? `${trendExitMoveMin.toFixed(3)}%` : "–")}</span></p>
+                  <p class="muted">Move min: <span class="mono">${escapeHtml(Number.isFinite(trendMoveMin) ? (trendMoveMin.toFixed(3) + "%") : "–")}</span></p>
+                  <p class="muted">Exit move min: <span class="mono">${escapeHtml(Number.isFinite(trendExitMoveMin) ? (trendExitMoveMin.toFixed(3) + "%") : "–")}</span></p>
                   <p class="muted">Auto side: <span class="mono">${escapeHtml((trendAutoSide === null || trendAutoSide === undefined) ? "–" : String(trendAutoSide))}</span></p>
                 ` : (hasMoveMeta ? `
                   <p class="muted" style="margin-top:10px">Move meta (legacy)</p>
-                  <p class="muted">Move min base: <span class="mono">${escapeHtml(Number.isFinite(moveBase) ? `${moveBase.toFixed(3)}%` : "–")}</span></p>
-                  <p class="muted">Move min dyn: <span class="mono">${escapeHtml(Number.isFinite(moveDyn) ? `${moveDyn.toFixed(3)}%` : "–")}</span></p>
-                  <p class="muted">Noise (est): <span class="mono">${escapeHtml(Number.isFinite(noisePct) ? `${noisePct.toFixed(3)}%` : "–")}</span></p>
-                  <p class="muted">Spread cost (half): <span class="mono">${escapeHtml(Number.isFinite(spreadCostPct) ? `${spreadCostPct.toFixed(3)}%` : "–")}</span></p>
+                  <p class="muted">Move min base: <span class="mono">${escapeHtml(Number.isFinite(moveBase) ? (moveBase.toFixed(3) + "%") : "–")}</span></p>
+                  <p class="muted">Move min dyn: <span class="mono">${escapeHtml(Number.isFinite(moveDyn) ? (moveDyn.toFixed(3) + "%") : "–")}</span></p>
+                  <p class="muted">Noise (est): <span class="mono">${escapeHtml(Number.isFinite(noisePct) ? (noisePct.toFixed(3) + "%") : "–")}</span></p>
+                  <p class="muted">Spread cost (half): <span class="mono">${escapeHtml(Number.isFinite(spreadCostPct) ? (spreadCostPct.toFixed(3) + "%") : "–")}</span></p>
                 ` : ``))}
               </div>
               <div class="card">
