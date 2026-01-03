@@ -23,6 +23,63 @@ python -m http.server 5173 --directory .\web
 
 Öppna sedan `http://localhost:5173`.
 
+## Trading agent (snapshots) – standard: pm_trend
+
+Portalen visar vad agenten gör genom snapshots i `web/data/`.
+
+**Standardstrategi är nu `pm_trend`**: Polymarket-only trendföljning (ingen extern referens/spot-feed i besluten) med optional auto-val av sida (YES/NO).
+
+### Kör lokalt (paper) med pm_trend – färdigt exempel
+
+Det här kör agenten i **paper** och skriver snapshots direkt till `web/data/` så att portalen uppdateras.
+
+```powershell
+Set-Location "c:\Users\lars-\OneDrive\spelar_eu"
+
+# (valfritt men rekommenderat)
+& .\.venv\Scripts\Activate.ps1
+
+# Output till portalen
+$env:OUT_DIR = '.\web\data'
+
+# Säker körning
+$env:TRADING_MODE = 'paper'
+$env:POLY_LIVE_CONFIRM = 'NO'
+
+# Standardstrategi
+$env:STRATEGY_MODE = 'pm_trend'
+
+# pm_trend parametrar
+$env:PM_TREND_LOOKBACK_POINTS = '10'
+$env:PM_TREND_MOVE_MIN_PCT = '0.10'
+$env:PM_TREND_EXIT_MOVE_MIN_PCT = '0.00'
+$env:PM_TREND_AUTO_SIDE = '1'
+
+# Takt
+$env:INTERVAL_S = '2'
+
+# (valfritt) scanning för att hitta fler markets, men utan auto-trade från scan
+$env:PM_SCAN_ENABLE = '1'
+$env:PM_SCAN_USE_FOR_TRADING = '0'
+$env:PM_SCAN_LIMIT = '60'
+$env:PM_SCAN_PAGES = '1'
+$env:PM_SCAN_INTERVAL_S = '60'
+
+# Kör en tick och avsluta
+$env:RUN_ONCE = '1'
+python -u -m vps.vps_agent
+```
+
+Vill du köra kontinuerligt (loop), sätt `$env:RUN_ONCE='0'`.
+
+### Byta tillbaka till lead_lag (om du vill)
+
+Sätt bara:
+
+```powershell
+$env:STRATEGY_MODE = 'lead_lag'
+```
+
 ## Viktigt: för att se ändringar på spelar.eu måste du deploya
 
 När Copilot (eller du) ändrar filer i den här repot så syns det **bara lokalt** tills du laddar upp dem till webbhotellet.
