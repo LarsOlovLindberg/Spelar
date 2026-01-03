@@ -1,63 +1,13 @@
-<h2>Systematisk handel baserad på tillfälliga marknadsskillnader</h2>
+<div data-command-center
+     data-portfolio="pm_paper_portfolio.json"
+     data-live="live_status.json"
+     data-positions="pm_paper_positions.csv"
+     data-trades="pm_paper_trades.csv"
+     data-edge="edge_calculator_live.csv"
+     data-sources="sources_health.json"
+     data-feed-max="8"></div>
 
-<h3>Snabböversikt</h3>
-<p class="muted">Nyckeltal och status från senaste snapshots.</p>
+<h3>Vad betyder detta?</h3>
+<p>Startsidan visar <strong>läget just nu</strong>: equity, status och senaste händelser – i mänskligt språk.</p>
 
-<div data-paper-portfolio="pm_paper_portfolio.json"></div>
-
-<div data-live-status="live_status.json"></div>
-
-<div class="grid">
-  <div class="card" style="grid-column: span 8">
-    <h4>Real-time Edge Calculator</h4>
-    <p class="muted">Brutto signal → spread → avgifter → netto. Trigger om netto > 0.</p>
-    <div data-edge-calculator="edge_calculator_live.csv"></div>
-  </div>
-  <div class="card" style="grid-column: span 4">
-    <h4>Market Lag vs System Latency</h4>
-    <p class="muted">Grönt om systemet är snabbare än marknaden.</p>
-    <div data-lag-latency="live_status.json"></div>
-  </div>
-</div>
-
-<div class="card" style="margin-top:16px">
-  <h4>Lead–lag health</h4>
-  <p class="muted">Rullande statistik: edge, net-edge, spread-cost, lag, likviditet, beslut och latens.</p>
-  <div data-json="lead_lag_health.json"></div>
-</div>
-
-<div class="card" style="margin-top:16px">
-  <h4>Missed Opportunities</h4>
-  <p class="muted">Tillfällen där signal fanns men trade inte triggade (orsak).</p>
-  <div data-missed-opps="edge_calculator_live.csv" data-max-rows="25"></div>
-</div>
-
-<div class="grid">
-  <div class="card" style="grid-column: span 8">
-    <h4>Senaste trades (paper)</h4>
-    <div data-csv="pm_paper_trades.csv" data-max-rows="25"></div>
-  </div>
-  <div class="card" style="grid-column: span 4">
-    <h4>Öppna positioner</h4>
-    <div data-csv="pm_paper_positions.csv" data-max-rows="50"></div>
-  </div>
-</div>
-
-<h3>Vad är detta?</h3>
-<p>Den här portalen visar <strong>live-data från vårt system</strong> som identifierar <em>tidsbegränsade marknadsskillnader</em> (edge) och loggar händelser i snapshots.</p>
-
-<p class="muted">En snapshot är en liten ögonblicksbild (JSON/CSV) som uppdateras automatiskt när VPS-agenten körs. Du behöver inte läsa kod för att följa vad som händer.</p>
-
-<h3>Vad gör strategin?</h3>
-<p>Systemet agerar på korta, mätbara prisskillnader som kan uppstå när en marknad reagerar snabbare än en annan.</p>
-
-<ul>
-  <li>Vi handlar inte på gissningar eller långsiktiga prognoser</li>
-  <li>Systemet utnyttjar tidsfördröjningar mellan marknader</li>
-  <li>Positioner hålls endast så länge en mätbar edge finns</li>
-</ul>
-
-<p>
-  <a class="btn" href="#/strategy/about">Så fungerar strategin</a>
-  <a class="btn" href="#/data">Se data & exempel</a>
-</p>
+<p class="muted">Allt tekniskt (filer, tabeller, detaljer) finns under <strong>Engine Room</strong>.</p>

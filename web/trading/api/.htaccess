@@ -1,0 +1,14 @@
+# Prevent accidental exposure of secret/local files under /trading/api
+# (PHP can still read these files from disk.)
+
+<IfModule mod_authz_core.c>
+  <FilesMatch "\.local($|\.)">
+    Require all denied
+  </FilesMatch>
+</IfModule>
+
+<IfModule !mod_authz_core.c>
+  <FilesMatch "\.local($|\.)">
+    Deny from all
+  </FilesMatch>
+</IfModule>

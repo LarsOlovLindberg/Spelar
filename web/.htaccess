@@ -18,3 +18,15 @@ AddType application/javascript .js
   AddCharset UTF-8 .html .css .js .json .csv
 </IfModule>
 
+# Never serve local/secret files (e.g. upload_api_key.local)
+<IfModule mod_authz_core.c>
+  <FilesMatch "\.local($|\.)">
+    Require all denied
+  </FilesMatch>
+</IfModule>
+<IfModule !mod_authz_core.c>
+  <FilesMatch "\.local($|\.)">
+    Deny from all
+  </FilesMatch>
+</IfModule>
+

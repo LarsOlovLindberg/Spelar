@@ -6,23 +6,31 @@
   <title>spelar.eu</title>
   <meta name="description" content="Systematisk, riskkontrollerad handel baserad på tillfälliga marknadsskillnader." />
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
   <style>
     :root{
-      /* Light, airy theme (kept as primitives via CSS variables) */
-      --bg:#f3f4f6;
-      --panel:#ffffff;
-      --panel2:#f9fafb;
-      --text:#111827;
-      --muted:#6b7280;
-      --border:rgba(17,24,39,.10);
-      --accent:#3b82f6;
-      --good:#16a34a;
+      /* Dark mode (deep navy, VS Code/Discord-ish) */
+      /* slightly darker, more “marine navy” */
+      --bg:#081226;
+      --panel:#0f1b33;
+      --panel2:#0b2a4a;
+      --panelHover:#132545;
+      --text:#e2e8f0;
+      --muted:#94a3b8;
+      --placeholder: rgba(148,163,184,.75);
+      --border:#334155;
+      /* clearer cyan accent + brighter green status */
+      --accent:#38bdf8;
+      --good:#22c55e;
       --bad:#ef4444;
       --warn:#f59e0b;
-      --shadow: 0 8px 24px rgba(17,24,39,.08);
-      --shadowSoft: 0 4px 6px -1px rgba(17,24,39,.08), 0 2px 4px -2px rgba(17,24,39,.06);
-      --radius: 16px;
-      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      --shadow: 0 14px 36px rgba(0,0,0,.42);
+      --shadowSoft: 0 8px 18px rgba(0,0,0,.28);
+      --radius: 12px;
+      --font: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
 
@@ -31,17 +39,15 @@
     body{
       margin:0;
       font-family:var(--font);
-      font-size:18px;
-      background:
-        radial-gradient(1200px 800px at 20% 0%, rgba(59,130,246,.12), transparent 52%),
-        radial-gradient(1200px 800px at 80% 20%, rgba(22,163,74,.10), transparent 52%),
-        var(--bg);
+      font-size:16px;
+      background: var(--bg);
       color:var(--text);
+      font-variant-numeric: tabular-nums lining-nums;
     }
 
     .app{
       display:grid;
-      grid-template-columns: 420px 1fr;
+      grid-template-columns: 320px 1fr;
       min-height:100vh;
     }
 
@@ -51,8 +57,8 @@
       top:0;
       height:100vh;
       padding:18px 14px;
-      background: transparent;
-      border-right:0;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 80%, #000 20%), color-mix(in srgb, var(--bg) 92%, #000 8%));
+      border-right:1px solid color-mix(in srgb, var(--border) 85%, transparent);
       overflow:auto;
     }
 
@@ -61,11 +67,11 @@
       align-items:center;
       gap:10px;
       padding:12px 12px 14px 12px;
-      border:1px solid var(--border);
-      background: var(--panel);
-      border-radius: var(--radius);
-      box-shadow: var(--shadowSoft);
-      margin-bottom:12px;
+      border:1px solid color-mix(in srgb, var(--border) 80%, transparent);
+      background: color-mix(in srgb, var(--panel) 88%, var(--bg) 12%);
+      border-radius: 14px;
+      box-shadow: none;
+      margin-bottom:14px;
     }
     .logo{
       width:36px;height:36px;border-radius:12px;
@@ -107,7 +113,7 @@
       color:var(--text);
       font-size:18px;
     }
-    .search input::placeholder{color:rgba(169,182,204,.75)}
+    .search input::placeholder{color:var(--placeholder)}
 
     .nav{
       display:flex;
@@ -117,50 +123,67 @@
 
     .nav-section{
       border:0;
-      background: var(--panel);
-      border-radius: var(--radius);
-      overflow:hidden;
-      box-shadow: var(--shadowSoft);
+      background: transparent;
+      border-radius: 0;
+      overflow:visible;
+      box-shadow: none;
+      padding-bottom: 10px;
+      border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
     }
     .nav-section .sec-title{
-      padding:10px 12px;
+      padding:12px 6px 8px 6px;
       font-size:13px;
       color:var(--muted);
       letter-spacing:.08em;
       text-transform:uppercase;
-      border-bottom:1px solid var(--border);
-      background: var(--panel2);
+      border-bottom:0;
+      background: transparent;
     }
-    .nav-items{padding:8px}
+    .nav-items{padding:2px 0}
     .nav a{
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:10px;
-      padding:10px 10px;
-      margin:2px 0;
+      padding:10px 12px;
+      margin:4px 0;
       text-decoration:none;
       color:var(--text);
-      border-radius:999px;
+      border-radius: 12px;
       border:1px solid transparent;
-      font-size:18px;
+      font-size:17px;
+      font-weight:600;
+      position:relative;
+      background: color-mix(in srgb, var(--panel) 30%, transparent);
     }
     .nav a:hover{
-      background: rgba(59,130,246,.10);
-      border-color: rgba(59,130,246,.22);
+      background: color-mix(in srgb, var(--accent) 10%, transparent);
+      border-color: color-mix(in srgb, var(--accent) 28%, transparent);
     }
     .nav a.active{
-      background: rgba(59,130,246,.14);
-      border-color: rgba(59,130,246,.28);
-      box-shadow: 0 8px 22px rgba(59,130,246,.10);
+      background: color-mix(in srgb, var(--accent) 14%, transparent);
+      border-color: color-mix(in srgb, var(--accent) 34%, transparent);
+      box-shadow: none;
+    }
+    .nav a.active::before{
+      content:"";
+      position:absolute;
+      left: -2px;
+      top: 8px;
+      bottom: 8px;
+      width: 4px;
+      border-radius: 99px;
+      background: var(--accent);
+      box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 45%, transparent);
     }
     .badge{
-      font-size:14px;
+      font-size:12px;
       padding:2px 8px;
       border-radius:999px;
-      border:1px solid var(--border);
-      color:var(--muted);
-      font-family:var(--mono);
+      border:1px solid color-mix(in srgb, var(--border) 85%, transparent);
+      background: color-mix(in srgb, var(--panel2) 45%, transparent);
+      color: color-mix(in srgb, var(--muted) 92%, var(--text) 8%);
+      font-family:var(--font);
       user-select:none;
       white-space:nowrap;
     }
@@ -174,7 +197,7 @@
       border-radius: var(--radius);
       background: var(--panel2);
     }
-    .footer code{font-family:var(--mono);color:rgba(230,237,247,.85)}
+    .footer code{font-family:var(--mono);color:var(--muted)}
     .footer .row{display:flex;justify-content:space-between;gap:10px;margin-top:6px}
     .dot{width:8px;height:8px;border-radius:99px;background:var(--warn);display:inline-block}
     .dot.ok{background:var(--good)}
@@ -233,6 +256,8 @@
       font-weight:800;
       letter-spacing:-0.02em;
       line-height:1.05;
+      font-variant-numeric: tabular-nums lining-nums;
+      font-feature-settings: "tnum" 1, "lnum" 1;
     }
 
     .actions{
@@ -244,7 +269,7 @@
     }
     button, .btn{
       border:1px solid var(--border);
-      background: rgba(255,255,255,.04);
+      background: color-mix(in srgb, var(--text) 6%, transparent);
       color:var(--text);
       padding:9px 11px;
       border-radius: 12px;
@@ -257,16 +282,17 @@
       user-select:none;
     }
     button:hover, .btn:hover{
-      border-color: rgba(106,167,255,.35);
-      background: rgba(106,167,255,.10);
+      border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+      background: color-mix(in srgb, var(--accent) 18%, transparent);
     }
 
     .content{
       border:0;
       border-radius: var(--radius);
-      background: transparent;
+      background: color-mix(in srgb, var(--bg) 62%, var(--panel2) 38%);
+      border:1px solid var(--border);
       box-shadow: none;
-      padding:8px;
+      padding:16px;
       min-height: calc(100vh - 18px - 14px - 18px - 100px);
     }
 
@@ -285,16 +311,16 @@
     .opsbar h3{
       margin:0 0 6px 0;
       font-size:22px;
-      color:rgba(230,237,247,.96);
+      color:var(--text);
     }
     .opsbar p{
       margin:6px 0;
-      color:rgba(230,237,247,.92);
+      color:var(--text);
       line-height:1.55;
     }
     .opssteps{
       margin:8px 0 0 18px;
-      color:rgba(230,237,247,.92);
+      color:var(--text);
     }
     .opssteps li{margin:6px 0}
     .opsright{
@@ -327,15 +353,15 @@
     .fileRow .meta{font-family:var(--mono);font-size:15px;color:var(--muted);white-space:nowrap}
     .fileRow .name{font-family:var(--mono);font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .notice{
-      border:1px solid rgba(59,130,246,.20);
-      background: rgba(59,130,246,.08);
+      border:1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+      background: color-mix(in srgb, var(--accent) 12%, transparent);
       border-radius: 12px;
       padding:12px 12px;
       margin-bottom:14px;
     }
-    .notice strong{color:rgba(230,237,247,.96)}
-    .notice a{color:rgba(230,237,247,.96)}
-    .notice .mono{color:rgba(230,237,247,.92)}
+    .notice strong{color:var(--text)}
+    .notice a{color:var(--accent)}
+    .notice .mono{color:var(--text)}
 
     /* Generic content styling */
     h2{margin:0 0 10px 0;font-size:30px;color:var(--text)}
@@ -364,7 +390,15 @@
       border:0;
       border-radius: var(--radius);
       background: var(--panel);
-      padding:22px;
+      padding:18px;
+      box-shadow: var(--shadowSoft);
+      border:1px solid var(--border);
+      position:relative;
+      transition: none;
+    }
+    .card:hover{
+      background: var(--panelHover);
+      border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
       box-shadow: var(--shadowSoft);
     }
     .card h4{margin:0 0 8px 0;font-size:18px;color:var(--text)}
@@ -375,7 +409,7 @@
       color:var(--muted);
       font-size:16px;
     }
-    .kv strong{color:rgba(230,237,247,.92);font-weight:600}
+    .kv strong{color:var(--text);font-weight:600}
     .pill{
       display:inline-flex;
       align-items:center;
@@ -386,6 +420,294 @@
       border:1px solid var(--border);
       background: var(--panel2);
       color:var(--text);
+    }
+
+    /* Shared “panel hover pop” for all boxes */
+    .brand,
+    .search,
+    .nav-section,
+    .topbar,
+    .opsbar,
+    .cc-shell,
+    .statusBadge,
+    .fileRow,
+    .notice{
+      position:relative;
+      transition: none;
+    }
+
+    /* Ensure key panels actually have a border that can accent on hover */
+    .nav-section,
+    .topbar,
+    .opsbar{
+      border:1px solid var(--border);
+    }
+
+    .brand:hover,
+    .search:hover,
+    .nav-section:hover,
+    .topbar:hover,
+    .opsbar:hover,
+    .cc-shell:hover,
+    .statusBadge:hover,
+    .fileRow:hover,
+    .notice:hover{
+      border-color: var(--accent);
+      z-index: 5;
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      .brand,.search,.nav-section,.topbar,.opsbar,.cc-shell,.statusBadge,.fileRow,.notice,.card{transition:none}
+      .brand:hover,.search:hover,.nav-section:hover,.topbar:hover,.opsbar:hover,.cc-shell:hover,.statusBadge:hover,.fileRow:hover,.notice:hover,.card:hover{transform:none}
+    }
+
+    /* Command Center (headline view) */
+    .cc{
+      max-width: 980px;
+      margin: 0 auto;
+    }
+    .cc-shell{
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadowSoft);
+      padding: 26px;
+    }
+    .cc-hero{
+      text-align: center;
+      padding: 6px 0 8px 0;
+    }
+    .cc-status{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:6px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--panel2);
+      font-family: var(--mono);
+      font-size: 14px;
+      color: var(--muted);
+      user-select:none;
+    }
+    .cc-status.ok{ color: var(--good); }
+    .cc-status.warn{ color: var(--warn); }
+    .cc-status.bad{ color: var(--bad); }
+
+    .cc-pulse{
+      width:10px;height:10px;
+      border-radius:999px;
+      background: currentColor;
+      box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 45%, transparent);
+      animation: none;
+    }
+
+    @keyframes ccPulse{
+      0%   { box-shadow: 0 0 0 0   color-mix(in srgb, currentColor 45%, transparent); }
+      70%  { box-shadow: 0 0 0 12px color-mix(in srgb, currentColor 0%, transparent); }
+      100% { box-shadow: 0 0 0 0   color-mix(in srgb, currentColor 0%, transparent); }
+    }
+
+    .cc-equity{
+      margin: 14px 0 6px 0;
+      font-size: 64px;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      line-height: 1.0;
+      font-variant-numeric: tabular-nums lining-nums;
+      font-feature-settings: "tnum" 1, "lnum" 1;
+    }
+    .cc-sub{
+      color: var(--muted);
+      font-size: 18px;
+      margin-top: 6px;
+    }
+
+    .cc-metrics{
+      margin-top: 18px;
+      display:grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 12px;
+    }
+    .cc-metric{
+      grid-column: span 4;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--panel2) 72%, var(--bg) 28%);
+      border-radius: 14px;
+      padding: 14px 14px;
+    }
+    .cc-metric h4{ margin: 0 0 6px 0; font-size: 16px; color: var(--muted); letter-spacing: .02em; }
+    .cc-metric .kpi{ font-size: 36px; font-weight: 900; letter-spacing: -0.02em; line-height: 1.05; }
+    .cc-mini{ font-size: 15px; color: var(--muted); line-height: 1.45; }
+
+    .cc-feed{
+      margin-top: 18px;
+      display:flex;
+      flex-direction:column;
+      gap: 12px;
+    }
+    .cc-event{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 12px;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--panel2) 72%, var(--bg) 28%);
+      border-radius: 14px;
+      padding: 14px 14px;
+      box-shadow: none;
+    }
+
+    .cc-poslist{
+      margin-top: 10px;
+      display:grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 12px;
+    }
+    .cc-pos{
+      grid-column: span 6;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--panel2) 72%, var(--bg) 28%);
+      border-radius: 14px;
+      padding: 14px 14px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 12px;
+    }
+    .cc-pos .title{ margin:0; font-size:16px; font-weight:800; line-height:1.25; }
+    .cc-pos .meta{ margin:6px 0 0 0; color:var(--muted); font-size:14px; line-height:1.4; }
+    .cc-tags{ display:flex; flex-direction:column; gap:8px; align-items:flex-end; }
+    .cc-tag{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      white-space:nowrap;
+      user-select:none;
+    }
+    .cc-tag.good{ border-color: color-mix(in srgb, var(--good) 35%, var(--border) 65%); }
+    .cc-tag.warn{ border-color: color-mix(in srgb, var(--warn) 35%, var(--border) 65%); }
+    .cc-tag.bad{ border-color: color-mix(in srgb, var(--bad) 35%, var(--border) 65%); }
+
+    @media (max-width: 860px){
+      .cc-pos{ grid-column: span 12; }
+    }
+
+    .cc-section{
+      margin-top: 16px;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--panel2) 68%, var(--bg) 32%);
+      border-radius: 14px;
+      padding: 14px 14px;
+    }
+    .cc-section h4{
+      margin: 0 0 10px 0;
+      font-size: 16px;
+      color: var(--muted);
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .cc-facts{
+      display:grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 12px;
+    }
+    .cc-fact{
+      grid-column: span 3;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 12px;
+    }
+    .cc-fact.wide{ grid-column: span 12; }
+    .cc-fact .label{ font-size: 13px; color: var(--muted); letter-spacing: .02em; }
+    .cc-fact .value{ margin-top: 4px; font-size: 22px; font-weight: 900; letter-spacing: -0.01em; }
+    .cc-fact .sub{ margin-top: 4px; font-size: 13px; color: var(--muted); }
+
+    .cc-pills{ display:flex; flex-wrap:wrap; gap: 8px; margin-top: 10px; }
+    .cc-pill{ border: 1px solid var(--border); background: var(--panel); border-radius: 999px; padding: 6px 10px; font-size: 14px; color: var(--text); }
+    .cc-pill.ok{ border-color: color-mix(in srgb, var(--good) 35%, var(--border) 65%); }
+    .cc-pill.warn{ border-color: color-mix(in srgb, var(--warn) 35%, var(--border) 65%); }
+    .cc-pill.bad{ border-color: color-mix(in srgb, var(--bad) 35%, var(--border) 65%); }
+
+    /* Simple tooltip for metrics */
+    .hasTip{ position:relative; cursor: help; }
+    .cc-metric.hasTip:hover,
+    .cc-fact.hasTip:hover,
+    .cc-event.hasTip:hover{
+      border-color: color-mix(in srgb, var(--accent) 28%, var(--border) 72%);
+      background: color-mix(in srgb, var(--panel2) 76%, var(--bg) 24%);
+    }
+    .cc-pill.hasTip:hover{
+      border-color: color-mix(in srgb, var(--accent) 28%, var(--border) 72%);
+    }
+    .hasTip::after{
+      content: attr(data-tip);
+      position:absolute;
+      top: calc(100% + 10px);
+      left: 50%;
+      transform: translateX(-50%) translateY(6px);
+      width: max-content;
+      max-width: min(720px, 94vw);
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border) 76%);
+      background: var(--panel);
+      box-shadow: var(--shadowSoft);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 15px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      text-align: left;
+      z-index: 60;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .hasTip::before{
+      content: "";
+      position:absolute;
+      top: calc(100% + 4px);
+      left: 50%;
+      transform: translateX(-50%) translateY(6px);
+      width: 0; height: 0;
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-bottom: 8px solid var(--panel);
+      filter: drop-shadow(0 -1px 0 var(--border));
+      z-index: 61;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .hasTip:hover::after,
+    .hasTip:hover::before,
+    .hasTip:focus::after,
+    .hasTip:focus::before,
+    .hasTip:focus-within::after,
+    .hasTip:focus-within::before{
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
+    }
+    .cc-event .left{ min-width:0; }
+    .cc-event .title{ margin:0; font-size:18px; font-weight:800; }
+    .cc-event .meta{ margin:4px 0 0 0; color: var(--muted); font-size: 15px; }
+    .cc-event .right{ display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+    .cc-event .when{ color: var(--muted); font-family: var(--mono); font-size: 13px; }
+
+    @media (max-width: 980px){
+      .cc-equity{ font-size: 54px; }
+      .cc-metric{ grid-column: span 12; }
+      .cc-fact{ grid-column: span 12; }
     }
 
     /* Edge calculator */
@@ -407,6 +729,17 @@
     }
     .edgecalc .net .label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
     .edgecalc .net .value{font-size:34px;font-weight:900;line-height:1.05}
+
+    /* Ensure numeric fields use consistent digit widths */
+    .cc-metric .kpi,
+    .cc-fact .value,
+    .gauge .val,
+    .edgecalc .net .value,
+    .fileRow .meta,
+    th, td{
+      font-variant-numeric: tabular-nums lining-nums;
+      font-feature-settings: "tnum" 1, "lnum" 1;
+    }
     .edgebar{
       height:34px;
       border-radius:999px;
@@ -472,12 +805,15 @@
       overflow-x:auto;
       overflow-y:auto;
       -webkit-overflow-scrolling:touch;
+      scrollbar-gutter: stable;
+      cursor: grab;
       background: var(--panel);
       border-radius: var(--radius);
       box-shadow: var(--shadowSoft);
       padding: 8px;
       margin-top: 10px;
     }
+    .tablewrap.dragging{cursor: grabbing}
     table{
       width:max-content;
       min-width:100%;
@@ -489,7 +825,7 @@
       border-bottom:1px solid var(--border);
       padding:10px 10px;
       text-align:left;
-      font-size:17px;
+      font-size:15px;
       white-space:nowrap;
     }
     th{
@@ -500,10 +836,31 @@
       top: 0;
       z-index: 1;
     }
-    tbody tr:nth-child(even){background: rgba(17,24,39,.02)}
+    tbody tr:nth-child(even){background: rgba(17,24,39,.06)}
     tbody tr:hover{background: rgba(59,130,246,.08)}
     .muted{color:var(--muted)}
     .mono{font-family:var(--mono)}
+
+    /* KPI / number styling (more like a trading dashboard)
+       Many numeric values are rendered as "mono" in injected blocks; keep mono for code/filenames,
+       but force KPI + numeric spans back to the UI font for the desired look. */
+    .mono.kpi,
+    .mono.num{
+      font-family: var(--font);
+    }
+    .kpi{
+      color: var(--accent);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums lining-nums;
+      font-feature-settings: "tnum" 1, "lnum" 1;
+    }
+    .kpi.num.good{ color: var(--good); }
+    .kpi.num.bad{ color: var(--bad); }
+    .cc-equity{
+      color: var(--accent);
+      text-shadow: 0 0 22px color-mix(in srgb, var(--accent) 35%, transparent);
+    }
     .num.good{color:var(--good)}
     .num.bad{color:var(--bad)}
     .num.warn{color:var(--warn)}
@@ -570,23 +927,23 @@
       {
         section: "Start",
         items: [
-          { id:"start-home", label:"Startsida", route:"#/start", page:"start_home.html", badge:"start", dataFiles:[] }
+          { id:"start-home", label:"Startsida", route:"#/start", page:"start_home.html", badge:"", dataFiles:[] }
         ]
       },
       {
         section: "Strategi & Teknik",
         items: [
-          { id:"strategy-about", label:"2.1 Om strategin", route:"#/strategy/about", page:"strategy_about.html", badge:"2.1", dataFiles:[] },
-          { id:"strategy-flow", label:"2.2 Hur systemet tänker", route:"#/strategy/flow", page:"strategy_flow.html", badge:"2.2", dataFiles:[] },
-          { id:"strategy-risk", label:"2.3 Risk & begränsningar", route:"#/strategy/risk", page:"strategy_risk.html", badge:"2.3", dataFiles:[] },
-          { id:"strategy-tech", label:"2.4 Teknisk översikt", route:"#/strategy/tech", page:"strategy_tech.html", badge:"2.4", dataFiles:[] }
+          { id:"strategy-about", label:"Om strategin", route:"#/strategy/about", page:"strategy_about.html", badge:"", dataFiles:[] },
+          { id:"strategy-flow", label:"Hur systemet tänker", route:"#/strategy/flow", page:"strategy_flow.html", badge:"", dataFiles:[] },
+          { id:"strategy-risk", label:"Risk & begränsningar", route:"#/strategy/risk", page:"strategy_risk.html", badge:"", dataFiles:[] },
+          { id:"strategy-tech", label:"Teknisk översikt", route:"#/strategy/tech", page:"strategy_tech.html", badge:"", dataFiles:[] }
         ]
       },
       {
-        section: "Transparens / Data",
+        section: "Engine Room",
         items: [
-          { id:"transparency-data", label:"Data & exempel", route:"#/data", page:"transparency_data.html", badge:"data", showNotice:false, showOps:true,
-            dataFiles:["live_status.json","polymarket_status.json","pm_paper_portfolio.json","pm_paper_positions.csv","pm_paper_trades.csv","edge_signals_live.csv","pm_paper_candidates.csv"] }
+          { id:"transparency-data", label:"Engine Room", route:"#/data", page:"transparency_data.html", badge:"", showNotice:false, showOps:true,
+            dataFiles:["live_status.json","polymarket_status.json","pm_paper_portfolio.json","pm_paper_positions.csv","pm_paper_trades.csv","edge_signals_live.csv","edge_calculator_live.csv","lead_lag_health.json","pm_paper_candidates.csv"] }
         ]
       }
     ];
@@ -630,13 +987,14 @@
 
           const left = document.createElement("span");
           left.textContent = it.label;
-
-          const badge = document.createElement("span");
-          badge.className = "badge";
-          badge.textContent = it.badge;
-
           a.appendChild(left);
-          a.appendChild(badge);
+
+          if (it.badge){
+            const badge = document.createElement("span");
+            badge.className = "badge";
+            badge.textContent = it.badge;
+            a.appendChild(badge);
+          }
           itemsEl.appendChild(a);
         }
 
@@ -670,6 +1028,15 @@
       const r = await fetch(url, { cache: "no-store" });
       if (!r.ok) throw new Error(`Kunde inte ladda ${url} (${r.status})`);
       return await r.text();
+    }
+
+    function withCacheBust(url){
+      const sep = url.includes("?") ? "&" : "?";
+      return `${url}${sep}_ts=${Date.now()}`;
+    }
+
+    function dataUrl(file){
+      return withCacheBust(`./data/${encodeURIComponent(String(file || ""))}`);
     }
 
     function fileStatusKind(ageMs, ok){
@@ -781,7 +1148,7 @@
     }
 
     async function getLastModifiedForDataFile(file){
-      const url = `./data/${file}`;
+      const url = dataUrl(file);
       // Prefer HEAD (fast). Fallback to GET if HEAD is blocked.
       try{
         const r = await fetch(url, { method: "HEAD", cache: "no-store" });
@@ -863,6 +1230,8 @@
       const showOps = !!route.showOps;
       opsBarEl.style.display = showOps ? "" : "none";
 
+      stopAutoRefresh();
+
       try{
         const html = await loadPage(route.page);
         contentEl.innerHTML = (route.showNotice ? renderNotice(route) : "") + html;
@@ -873,13 +1242,61 @@
         if (showOps){
           await updateLiveStatusForRoute(route);
         }
+
+        startAutoRefresh(route);
       }catch(e){
         contentEl.innerHTML = `
           <h2>Kunde inte ladda sidan</h2>
           <p class="muted mono">${escapeHtml(String(e))}</p>
           <p>Kontrollera att filen finns i <span class="mono">/web/pages/</span>.</p>
         `;
+
+        stopAutoRefresh();
       }
+    }
+
+    // ----------------------------
+    // Auto-refresh (keeps boxes updating without manual reload)
+    // ----------------------------
+    const AUTO_REFRESH_MS = 20_000;
+    let autoRefreshTimer = null;
+    let autoRefreshInFlight = false;
+
+    function stopAutoRefresh(){
+      if (autoRefreshTimer){
+        clearInterval(autoRefreshTimer);
+        autoRefreshTimer = null;
+      }
+    }
+
+    function shouldAutoRefresh(route){
+      if (!route) return false;
+      if (route.showOps) return true;
+      if (Array.isArray(route.dataFiles) && route.dataFiles.length) return true;
+      return !!contentEl.querySelector(
+        "[data-command-center],[data-csv],[data-json],[data-paper-portfolio],[data-live-status],[data-edge-calculator],[data-lag-latency],[data-missed-opps]"
+      );
+    }
+
+    async function refreshNow(route){
+      if (autoRefreshInFlight) return;
+      autoRefreshInFlight = true;
+      try{
+        await hydrateDataBlocks();
+        if (route && route.showOps){
+          await updateLiveStatusForRoute(route);
+        }
+      }catch(_e){
+        // Keep UI responsive even if refresh fails.
+      }finally{
+        autoRefreshInFlight = false;
+      }
+    }
+
+    function startAutoRefresh(route){
+      stopAutoRefresh();
+      if (!shouldAutoRefresh(route)) return;
+      autoRefreshTimer = setInterval(() => { refreshNow(route); }, AUTO_REFRESH_MS);
     }
 
     // ----------------------------
@@ -1004,12 +1421,557 @@
       // Shared numeric formatting helpers used by multiple blocks.
       const fmt2 = (n) => Number.isFinite(n) ? n.toFixed(2) : "";
 
+      // Command Center (headline view)
+      const ccBlocks = Array.from(contentEl.querySelectorAll("[data-command-center]"));
+      for (const el of ccBlocks){
+        const portfolioFile = el.getAttribute("data-portfolio") || "pm_paper_portfolio.json";
+        const liveFile = el.getAttribute("data-live") || "live_status.json";
+        const tradesFile = el.getAttribute("data-trades") || "pm_paper_trades.csv";
+        const edgeFile = el.getAttribute("data-edge") || "edge_calculator_live.csv";
+        const positionsFile = el.getAttribute("data-positions") || "pm_paper_positions.csv";
+        const sourcesFile = el.getAttribute("data-sources") || "";
+        const feedMax = parseInt(el.getAttribute("data-feed-max") || "8", 10);
+
+        try{
+          const [rPort, rLive, rTrades, rPos, rEdge] = await Promise.all([
+            fetch(dataUrl(portfolioFile), { cache: "no-store" }),
+            fetch(dataUrl(liveFile), { cache: "no-store" }),
+            fetch(dataUrl(tradesFile), { cache: "no-store" }),
+            fetch(dataUrl(positionsFile), { cache: "no-store" }),
+            fetch(dataUrl(edgeFile), { cache: "no-store" }),
+          ]);
+
+          if (!rPort.ok) throw new Error(`${portfolioFile} (${rPort.status})`);
+          if (!rLive.ok) throw new Error(`${liveFile} (${rLive.status})`);
+          if (!rTrades.ok) throw new Error(`${tradesFile} (${rTrades.status})`);
+          if (!rPos.ok) throw new Error(`${positionsFile} (${rPos.status})`);
+          if (!rEdge.ok) throw new Error(`${edgeFile} (${rEdge.status})`);
+
+          const portfolio = await rPort.json();
+          const live = await rLive.json();
+          const tradesText = await rTrades.text();
+          const posText = await rPos.text();
+          const edgeText = await rEdge.text();
+
+          let sources = null;
+          if (sourcesFile){
+            try{
+              const rSrc = await fetch(dataUrl(sourcesFile), { cache: "no-store" });
+              if (rSrc.ok) sources = await rSrc.json();
+            }catch{
+              sources = null;
+            }
+          }
+
+          const equity = Number(portfolio?.equity_usd ?? NaN);
+          const startBal = Number(portfolio?.start_balance_usd ?? NaN);
+          const cash = Number(portfolio?.cash_usd ?? NaN);
+          const rpnl = Number(portfolio?.realized_pnl_usd ?? 0);
+          const upnl = Number(portfolio?.unrealized_pnl_usd ?? 0);
+          const openPos = Number(portfolio?.open_positions ?? NaN);
+          const pnlSinceStart = (Number.isFinite(equity) && Number.isFinite(startBal)) ? (equity - startBal) : NaN;
+
+          const liveTs = String(live?.ts ?? "");
+          const liveMs = parseTimestampMs(liveTs);
+          const liveAgeMs = Number.isFinite(liveMs) ? Math.max(0, Date.now() - liveMs) : NaN;
+
+          let statusCls = "warn";
+          let statusText = "SYSTEM";
+          if (Number.isFinite(liveAgeMs)){
+            if (liveAgeMs <= 60_000) { statusCls = "ok"; statusText = "SYSTEM ONLINE"; }
+            else if (liveAgeMs <= 5 * 60_000) { statusCls = "warn"; statusText = "SYSTEM LIVE (SLOW)"; }
+            else { statusCls = "bad"; statusText = "SYSTEM STALE"; }
+          }
+
+          const tradingMode = String(live?.trading_mode ?? "paper").toUpperCase();
+          const strategyMode = String(live?.strategy_mode ?? live?.mode ?? "-");
+          const mapped = Number(live?.mapped_markets ?? NaN);
+          const marketLagMs = tryParseNumber(live?.market_lag_ms);
+          const systemLatencyMs = tryParseNumber(live?.system_latency_ms);
+          const killswitch = (live?.killswitch ?? live?.kill_switch);
+
+          // Positions summary
+          const posRows = parseCsv(posText);
+          const posCount = Math.max(0, posRows.length - 1);
+          let posUpnl = 0;
+          let posValue = 0;
+          let posAdds = 0;
+          let topPos = null; // { market, outcome, value, pnl }
+          let openPositionsTooltip = "Inga öppna positioner.";
+          if (posRows.length > 1){
+            const head = posRows[0].map(h => String(h || "").toLowerCase());
+            const idxPnl = head.indexOf("unrealized_pnl");
+            const idxValue = head.indexOf("value");
+            const idxMarket = head.indexOf("market");
+            const idxOutcome = head.indexOf("outcome");
+            const idxShares = head.indexOf("shares");
+            const idxAvg = head.indexOf("avg_entry");
+            const idxLast = head.indexOf("last_price");
+            const idxAdds = head.indexOf("adds");
+            const idxLastMid = head.indexOf("last_mid");
+            const idxLastScaleAt = head.indexOf("last_scale_at");
+            if (idxPnl >= 0){
+              for (const r of posRows.slice(1)){
+                const n = tryParseNumber(r[idxPnl]);
+                if (Number.isFinite(n)) posUpnl += n;
+              }
+            }
+            if (idxValue >= 0){
+              for (const r of posRows.slice(1)){
+                const v = tryParseNumber(r[idxValue]);
+                if (Number.isFinite(v)) posValue += v;
+
+                if (idxAdds >= 0){
+                  const a = tryParseNumber(r[idxAdds]);
+                  if (Number.isFinite(a)) posAdds += a;
+                }
+
+                if (Number.isFinite(v) && (!topPos || v > topPos.value)){
+                  const m = idxMarket >= 0 ? String(r[idxMarket] ?? "") : "";
+                  const o = idxOutcome >= 0 ? String(r[idxOutcome] ?? "") : "";
+                  const p = idxPnl >= 0 ? tryParseNumber(r[idxPnl]) : NaN;
+                  topPos = { market: m, outcome: o, value: v, pnl: p };
+                }
+              }
+            }
+
+            // Tooltip list (keep it short)
+            const items = [];
+            for (const r of posRows.slice(1)){
+              const m = idxMarket >= 0 ? String(r[idxMarket] ?? "") : "";
+              const o = idxOutcome >= 0 ? String(r[idxOutcome] ?? "") : "";
+              const sh = idxShares >= 0 ? tryParseNumber(r[idxShares]) : NaN;
+              const avg = idxAvg >= 0 ? tryParseNumber(r[idxAvg]) : NaN;
+              const last = idxLast >= 0 ? tryParseNumber(r[idxLast]) : NaN;
+              const adds = idxAdds >= 0 ? tryParseNumber(r[idxAdds]) : NaN;
+              const lastMid = idxLastMid >= 0 ? tryParseNumber(r[idxLastMid]) : NaN;
+              const lastScaleAt = idxLastScaleAt >= 0 ? String(r[idxLastScaleAt] ?? "") : "";
+
+              let line = m || "(okänd market)";
+              if (o) line += ` (${o})`;
+              const parts = [];
+              if (Number.isFinite(sh)) parts.push(`${fmt2(sh)} sh`);
+              if (Number.isFinite(avg)) parts.push(`avg $${fmt2(avg)}`);
+              if (Number.isFinite(last)) parts.push(`last $${fmt2(last)}`);
+              if (Number.isFinite(lastMid)) parts.push(`mid $${fmt2(lastMid)}`);
+              if (Number.isFinite(adds) && adds > 0) parts.push(`scale +${Math.round(adds)}`);
+              if (lastScaleAt) parts.push(`senast scale ${lastScaleAt}`);
+              if (parts.length) line += ` — ${parts.join(" · ")}`;
+              items.push(line);
+            }
+
+            const maxLines = 8;
+            const shown = items.slice(0, maxLines);
+            const rest = Math.max(0, items.length - shown.length);
+            openPositionsTooltip = `Öppna positioner (${items.length}):\n` + shown.join("\n") + (rest ? `\n… +${rest} till` : "");
+          }
+
+          // Trades feed
+          const tradeRows = parseCsv(tradesText);
+          const tradeHead = tradeRows[0] || [];
+          const tradeBody = tradeRows.slice(1);
+          const h = tradeHead.map(x => String(x || "").toLowerCase());
+          const col = (name) => h.indexOf(name);
+          const iTs = col("ts");
+          const iMarket = col("market");
+          const iOutcome = col("outcome");
+          const iAction = col("action");
+          const iPrice = col("price");
+          const iShares = col("shares");
+          const iNotional = col("notional");
+          const iStatus = col("status");
+          const iNotes = col("notes");
+
+          const latestTrades = tradeBody.slice(-feedMax).reverse();
+          const latestTradeTs = (latestTrades.length && iTs >= 0) ? String(latestTrades[0][iTs] ?? "") : "";
+          const latestTradeMs = parseTimestampMs(latestTradeTs);
+          const latestTradeAgeMs = Number.isFinite(latestTradeMs) ? Math.max(0, Date.now() - latestTradeMs) : NaN;
+          const eventsHtml = latestTrades.map(r => {
+            const ts = iTs >= 0 ? String(r[iTs] ?? "") : "";
+            const ms = parseTimestampMs(ts);
+            const when = Number.isFinite(ms) ? formatAge(Math.max(0, Date.now() - ms)) : "–";
+
+            const action = iAction >= 0 ? String(r[iAction] ?? "") : "";
+            const market = iMarket >= 0 ? String(r[iMarket] ?? "") : "";
+            const outcome = iOutcome >= 0 ? String(r[iOutcome] ?? "") : "";
+            const price = iPrice >= 0 ? tryParseNumber(r[iPrice]) : NaN;
+            const shares = iShares >= 0 ? tryParseNumber(r[iShares]) : NaN;
+            const notional = iNotional >= 0 ? tryParseNumber(r[iNotional]) : NaN;
+            const status = iStatus >= 0 ? String(r[iStatus] ?? "") : "";
+            const notes = iNotes >= 0 ? String(r[iNotes] ?? "") : "";
+
+            const isScale = /\bscale_in\b/i.test(notes);
+
+            const verb = action === "BUY" ? (isScale ? "Skalade in" : "Köpte") : (action === "SELL" ? "Sålde" : (action ? action : "Trade"));
+            const title = `${verb} ${market}${outcome ? ` (${outcome})` : ""}`;
+            const metaParts = [];
+            if (Number.isFinite(price)) metaParts.push(`@$${fmt2(price)}`);
+            if (Number.isFinite(shares)) metaParts.push(`${fmt2(shares)} shares`);
+            if (Number.isFinite(notional)) metaParts.push(`$${fmt2(notional)}`);
+            if (notes) metaParts.push(notes);
+            const meta = metaParts.join(" · ");
+
+            const pillCls = status === "filled" ? "pill" : (status === "skipped" ? "pill" : "pill");
+            return `
+              <div class="cc-event">
+                <div class="left">
+                  <p class="title">${escapeHtml(title)}</p>
+                  <p class="meta">${escapeHtml(meta || "–")}</p>
+                </div>
+                <div class="right">
+                  <span class="${pillCls}">${escapeHtml(isScale ? "SCALE" : (status || ""))}</span>
+                  <span class="when">${escapeHtml(when)}</span>
+                </div>
+              </div>
+            `;
+          }).join("");
+
+          // Fallback activity (when no trades): show last decision rows from edge_calculator_live.csv
+          let edgeEventsHtml = "";
+          try{
+            const edgeRows = parseCsv(edgeText);
+            const edgeHead = edgeRows[0] || [];
+            const edgeBody = edgeRows.slice(1);
+            const eh = edgeHead.map(x => String(x || "").toLowerCase());
+            const ecol = (name) => eh.indexOf(name);
+            const eTs = ecol("ts");
+            const eMarket = ecol("market");
+            const eStatus = ecol("execution_status");
+            const eReason = ecol("reason");
+            const eRaw = ecol("raw_edge");
+            const eSpread = ecol("spread_cost");
+            const eFees = ecol("fees");
+            const eNet = ecol("net_edge");
+
+            const latestEdges = edgeBody.slice(-feedMax).reverse();
+            edgeEventsHtml = latestEdges.map(r => {
+              const ts = eTs >= 0 ? String(r[eTs] ?? "") : "";
+              const ms = parseTimestampMs(ts);
+              const when = Number.isFinite(ms) ? formatAge(Math.max(0, Date.now() - ms)) : "–";
+
+              const market = eMarket >= 0 ? String(r[eMarket] ?? "") : "";
+              const status = eStatus >= 0 ? String(r[eStatus] ?? "") : "";
+              const reason = eReason >= 0 ? String(r[eReason] ?? "") : "";
+              const rawEdge = eRaw >= 0 ? tryParseNumber(r[eRaw]) : NaN;
+              const spreadCost = eSpread >= 0 ? tryParseNumber(r[eSpread]) : NaN;
+              const fees = eFees >= 0 ? tryParseNumber(r[eFees]) : NaN;
+              const netEdge = eNet >= 0 ? tryParseNumber(r[eNet]) : NaN;
+
+              const reasonTxt = humanizeReason(reason);
+              const title = status && status.toUpperCase() === "SKIPPED"
+                ? `Avstod: ${reasonTxt || "(orsak okänd)"}`
+                : (status ? status : "Decision");
+
+              const metaParts = [];
+              if (market) metaParts.push(market);
+              if (Number.isFinite(netEdge)) metaParts.push(`net ${fmt2(netEdge)}%`);
+              if (Number.isFinite(rawEdge)) metaParts.push(`raw ${fmt2(rawEdge)}%`);
+              if (Number.isFinite(spreadCost)) metaParts.push(`spread ${fmt2(spreadCost)}%`);
+              if (Number.isFinite(fees)) metaParts.push(`fees ${fmt2(fees)}%`);
+              const meta = metaParts.join(" · ");
+
+              return `
+                <div class="cc-event">
+                  <div class="left">
+                    <p class="title">${escapeHtml(title)}</p>
+                    <p class="meta">${escapeHtml(meta || "–")}</p>
+                  </div>
+                  <div class="right">
+                    <span class="pill">${escapeHtml(status || "")}</span>
+                    <span class="when">${escapeHtml(when)}</span>
+                  </div>
+                </div>
+              `;
+            }).join("");
+          }catch{
+            edgeEventsHtml = "";
+          }
+
+          const equityStr = Number.isFinite(equity) ? `$${fmt2(equity)}` : "$–";
+          const pnlCls = numClass(pnlSinceStart);
+          const pnlArrow = Number.isFinite(pnlSinceStart) ? (pnlSinceStart >= 0 ? "▲" : "▼") : "";
+          const pnlStr = Number.isFinite(pnlSinceStart) ? `${pnlArrow} $${fmt2(Math.abs(pnlSinceStart))} (sedan start)` : "–";
+
+          const lagStr = Number.isFinite(marketLagMs)
+            ? (marketLagMs >= 10_000 ? `${Math.round(marketLagMs/1000)}s` : `${Math.round(marketLagMs)}ms`)
+            : "–";
+          const latencyStr = Number.isFinite(systemLatencyMs) ? `${Math.round(systemLatencyMs)}ms` : "–";
+          const exposureStr = Number.isFinite(posValue) && posValue > 0 ? `$${fmt2(posValue)}` : "–";
+          const mappedStr = Number.isFinite(mapped) ? String(Math.round(mapped)) : "–";
+
+          const health = (() => {
+            const pmClobOk = Boolean(sources?.polymarket?.clob?.ok);
+            const pmGammaOk = Boolean(sources?.polymarket?.gamma?.ok);
+
+            const pills = [];
+            pills.push({
+              key: "pm_clob",
+              cls: pmClobOk ? "ok" : "bad",
+              text: `Polymarket CLOB: ${pmClobOk ? "OK" : "FAIL"}`,
+              tip: `Datakälla: ${sourcesFile || "sources_health.json"}\nTolkning: OK = lyckad senaste hämtning mot CLOB. FAIL = senaste försök misslyckades.`
+            });
+            pills.push({
+              key: "pm_gamma",
+              cls: pmGammaOk ? "ok" : "bad",
+              text: `Gamma: ${pmGammaOk ? "OK" : "FAIL"}`,
+              tip: `Datakälla: ${sourcesFile || "sources_health.json"}\nTolkning: OK = Gamma API svarar (market discovery). FAIL = problem att nå Gamma.`
+            });
+            return pills;
+          })();
+
+          el.classList.add("cc");
+          el.innerHTML = `
+            <div class="cc-shell">
+              <div class="cc-hero">
+                <div class="cc-status ${escapeHtml(statusCls)}">
+                  <span class="cc-pulse" aria-hidden="true"></span>
+                  <span>${escapeHtml(statusText)}</span>
+                  <span class="mono">${escapeHtml(tradingMode)}</span>
+                </div>
+                <div class="cc-equity">${escapeHtml(equityStr)}</div>
+                <div class="cc-sub"><span class="mono ${escapeHtml(pnlCls)}">${escapeHtml(pnlStr)}</span></div>
+                <div class="cc-sub">Strategi: <span class="mono">${escapeHtml(strategyMode)}</span>${(killswitch === true || killswitch === false) ? ` · Killswitch: <span class=\"mono\">${escapeHtml(killswitch ? "PÅ" : "AV")}</span>` : ""}</div>
+              </div>
+
+              <div class="cc-metrics">
+                <div class="cc-metric cc-openpos">
+                  <h4>Öppna positioner</h4>
+                  <div class="mono kpi">${escapeHtml(String(posCount))}</div>
+                  <p class="cc-mini">Unrealized: <span class="mono ${escapeHtml(numClass(posUpnl))}">$${escapeHtml(fmt2(posUpnl))}</span>${posAdds > 0 ? ` · Skalningar: <span class="mono">+${escapeHtml(String(Math.round(posAdds)))}</span>` : ""}</p>
+                </div>
+                <div class="cc-metric cc-cash">
+                  <h4>Cash</h4>
+                  <div class="mono kpi">$${escapeHtml(fmt2(cash))}</div>
+                  <p class="cc-mini">Realized: <span class="mono ${escapeHtml(numClass(rpnl))}">$${escapeHtml(fmt2(rpnl))}</span> · Unrealized: <span class="mono ${escapeHtml(numClass(upnl))}">$${escapeHtml(fmt2(upnl))}</span></p>
+                </div>
+                <div class="cc-metric cc-now">
+                  <h4>Just nu</h4>
+                  <div class="mono kpi">Söker</div>
+                  <p class="cc-mini">Senast tick: <span class="mono">${escapeHtml(Number.isFinite(liveAgeMs) ? formatAge(liveAgeMs) : "–")}</span></p>
+                </div>
+              </div>
+
+              <div class="cc-section" style="margin-top:14px">
+                <h4>Öppna positioner (live)</h4>
+                <p class="muted" style="margin:0">Här ser du vilka positioner som faktiskt är öppna – och om de har börjat <strong>skala in</strong>.</p>
+                <div class="cc-poslist">
+                  ${(() => {
+                    if (!posRows || posRows.length <= 1) return `<p class="muted" style="grid-column: span 12; margin:10px 0 0 0">Inga öppna positioner just nu.</p>`;
+                    const head = posRows[0].map(h => String(h || "").toLowerCase());
+                    const idxMarket = head.indexOf("market");
+                    const idxOutcome = head.indexOf("outcome");
+                    const idxShares = head.indexOf("shares");
+                    const idxAvg = head.indexOf("avg_entry");
+                    const idxUpnl = head.indexOf("unrealized_pnl");
+                    const idxAdds = head.indexOf("adds");
+                    const idxLastMid = head.indexOf("last_mid");
+                    const idxLastScaleAt = head.indexOf("last_scale_at");
+
+                    const items = posRows.slice(1).map(r => {
+                      const market = idxMarket >= 0 ? String(r[idxMarket] ?? "") : "";
+                      const outcome = idxOutcome >= 0 ? String(r[idxOutcome] ?? "") : "";
+                      const shares = idxShares >= 0 ? tryParseNumber(r[idxShares]) : NaN;
+                      const avg = idxAvg >= 0 ? tryParseNumber(r[idxAvg]) : NaN;
+                      const upnl = idxUpnl >= 0 ? tryParseNumber(r[idxUpnl]) : NaN;
+                      const adds = idxAdds >= 0 ? tryParseNumber(r[idxAdds]) : NaN;
+                      const mid = idxLastMid >= 0 ? tryParseNumber(r[idxLastMid]) : NaN;
+                      const lastScaleAt = idxLastScaleAt >= 0 ? String(r[idxLastScaleAt] ?? "").trim() : "";
+
+                      const title = `${market || "(okänd market)"}${outcome ? ` (${outcome})` : ""}`;
+                      const metaParts = [];
+                      if (Number.isFinite(shares)) metaParts.push(`${fmt2(shares)} sh`);
+                      if (Number.isFinite(avg)) metaParts.push(`avg $${fmt2(avg)}`);
+                      if (Number.isFinite(mid)) metaParts.push(`mid $${fmt2(mid)}`);
+                      if (Number.isFinite(upnl)) metaParts.push(`uPnL $${fmt2(upnl)}`);
+                      const meta = metaParts.join(" · ");
+
+                      let scaleTag = "HOLD";
+                      let scaleCls = "warn";
+                      if (Number.isFinite(adds) && adds > 0){
+                        scaleTag = `SCALE +${Math.round(adds)}`;
+                        scaleCls = "good";
+                      }
+
+                      let lastScaleWhen = "–";
+                      const lms = parseTimestampMs(lastScaleAt);
+                      if (Number.isFinite(lms)) lastScaleWhen = formatAge(Math.max(0, Date.now() - lms));
+
+                      return {
+                        title,
+                        meta,
+                        upnl,
+                        scaleTag,
+                        scaleCls,
+                        lastScaleWhen,
+                        hasScale: (Number.isFinite(adds) && adds > 0) || Boolean(lastScaleAt),
+                      };
+                    });
+
+                    // Sort: scaled positions first, then by abs uPnL desc.
+                    items.sort((a, b) => {
+                      const as = a.hasScale ? 1 : 0;
+                      const bs = b.hasScale ? 1 : 0;
+                      if (as !== bs) return bs - as;
+                      const au = Number.isFinite(a.upnl) ? Math.abs(a.upnl) : -1;
+                      const bu = Number.isFinite(b.upnl) ? Math.abs(b.upnl) : -1;
+                      return bu - au;
+                    });
+
+                    const shown = items.slice(0, 6);
+                    const rest = Math.max(0, items.length - shown.length);
+
+                    const cards = shown.map(it => {
+                      const pnlCls = numClass(it.upnl);
+                      return `
+                        <div class="cc-pos">
+                          <div class="left">
+                            <p class="title">${escapeHtml(it.title)}</p>
+                            <p class="meta">${escapeHtml(it.meta || "–")}</p>
+                          </div>
+                          <div class="cc-tags">
+                            <span class="cc-tag ${escapeHtml(it.scaleCls)}">${escapeHtml(it.scaleTag)}</span>
+                            <span class="cc-tag ${escapeHtml(pnlCls === "good" ? "good" : (pnlCls === "bad" ? "bad" : "warn"))}">${escapeHtml(Number.isFinite(it.upnl) ? `PnL ${it.upnl >= 0 ? "+" : "-"}$${fmt2(Math.abs(it.upnl))}` : "PnL –")}</span>
+                            <span class="cc-tag">${escapeHtml(it.hasScale ? `senast scale ${it.lastScaleWhen}` : "inte skalat än")}</span>
+                          </div>
+                        </div>
+                      `;
+                    }).join("");
+
+                    return cards + (rest ? `<p class="muted" style="grid-column: span 12; margin:6px 0 0 0">… +${rest} fler positioner</p>` : "");
+                  })()}
+                </div>
+              </div>
+
+              <div class="cc-section">
+                <h4>Snabba fakta</h4>
+                <div class="cc-facts">
+                  <div class="cc-fact cc-fact-mapped">
+                    <div class="label">Kartlagda marknader</div>
+                    <div class="value mono">${escapeHtml(mappedStr)}</div>
+                    <div class="sub">Antal i market map</div>
+                  </div>
+                  <div class="cc-fact cc-fact-lag">
+                    <div class="label">Market lag</div>
+                    <div class="value mono">${escapeHtml(lagStr)}</div>
+                    <div class="sub">Hur långt efter marknaden</div>
+                  </div>
+                  <div class="cc-fact cc-fact-latency">
+                    <div class="label">System latency</div>
+                    <div class="value mono">${escapeHtml(latencyStr)}</div>
+                    <div class="sub">Internt loop-lag</div>
+                  </div>
+                  <div class="cc-fact cc-fact-exposure">
+                    <div class="label">Exponering</div>
+                    <div class="value mono">${escapeHtml(exposureStr)}</div>
+                    <div class="sub">Summa position value</div>
+                  </div>
+
+                  <div class="cc-fact wide cc-fact-toppos">
+                    <div class="label">Största position</div>
+                    <div class="value">${escapeHtml(topPos ? `${topPos.market}${topPos.outcome ? ` (${topPos.outcome})` : ""}` : "–")}</div>
+                    <div class="sub">Value: <span class="mono">${escapeHtml(topPos && Number.isFinite(topPos.value) ? `$${fmt2(topPos.value)}` : "–")}</span> · Unrealized: <span class="mono ${escapeHtml(numClass(topPos?.pnl))}">${escapeHtml(topPos && Number.isFinite(topPos.pnl) ? `$${fmt2(topPos.pnl)}` : "–")}</span></div>
+                  </div>
+                </div>
+
+                ${health && health.length ? `<div class="cc-pills">${health.map(p => `<span class="cc-pill ${escapeHtml(p.cls)}" data-pill="${escapeHtml(p.key || "")}">${escapeHtml(p.text)}</span>`).join("")}</div>` : ""}
+              </div>
+
+              <h3 style="margin-top:18px">Action Feed</h3>
+              <p class="muted">Senaste händelser (paper): trades + beslut att avstå.</p>
+              <div class="cc-feed">${((latestTrades.length && (!Number.isFinite(latestTradeAgeMs) || latestTradeAgeMs <= 10 * 60_000)) ? eventsHtml : edgeEventsHtml) || "<p class=\"muted\">Inga events ännu.</p>"}</div>
+
+              <p style="margin-top:16px">
+                <a class="btn" href="#/data">Engine Room</a>
+                <a class="btn" href="#/strategy/about">Så funkar strategin</a>
+              </p>
+            </div>
+          `;
+
+          // Attach tooltip to the whole metric card (works even when hovering children)
+          const attachTip = (selector, tipText) => {
+            const node = el.querySelector(selector);
+            const text = String(tipText ?? "").trim();
+            if (!node || !text) return;
+            node.classList.add("hasTip");
+            node.setAttribute("tabindex", "0");
+            node.setAttribute("role", "note");
+            node.dataset.tip = text;
+          };
+
+          const attachTipAll = (selector, tipText) => {
+            const nodes = Array.from(el.querySelectorAll(selector));
+            const text = String(tipText ?? "").trim();
+            if (!nodes.length || !text) return;
+            for (const node of nodes){
+              node.classList.add("hasTip");
+              node.setAttribute("tabindex", "0");
+              node.setAttribute("role", "note");
+              node.dataset.tip = text;
+            }
+          };
+
+          attachTip(
+            ".cc-openpos",
+            `Vad betyder rutan?\nÖppna positioner = antal aktiva rader i ${positionsFile}.\nListan visar market/outcome + shares/avg/last (max 8 rader).\n\n${openPositionsTooltip}`
+          );
+          attachTip(
+            ".cc-cash",
+            `Vad betyder rutan?\nCash = fritt saldo i portföljen (USD).\nRealized/Unrealized = PnL för stängda/öppna positioner enligt ${portfolioFile}.`
+          );
+          attachTip(
+            ".cc-now",
+            `Vad betyder rutan?\nJust nu = vilket läge strategin är i.\n\"Senast tick\" visar hur gammal senaste ${liveFile}-uppdateringen är (grovt hälsotest).`
+          );
+
+          // Snabba fakta
+          attachTip(
+            ".cc-fact-mapped",
+            `Kartlagda marknader\nKommer från ${liveFile}: fält mapped_markets.\nTolkning: hur många markets strategin har i sin market map.`
+          );
+          attachTip(
+            ".cc-fact-lag",
+            `Market lag\nKommer från ${liveFile}: fält market_lag_ms.\nTolkning: hur långt efter marknadsdata systemet ligger just nu.`
+          );
+          attachTip(
+            ".cc-fact-latency",
+            `System latency\nKommer från ${liveFile}: fält system_latency_ms.\nTolkning: internt loop-/process-lag (inte samma som market lag).`
+          );
+          attachTip(
+            ".cc-fact-exposure",
+            `Exponering\nBeräknas från ${positionsFile}: summa av kolumnen value.\nTolkning: total position value (USD) för alla öppna positioner.`
+          );
+          attachTip(
+            ".cc-fact-toppos",
+            `Största position\nBeräknas från ${positionsFile}: raden med högst value.\nVisar market/outcome + dess value och unrealized_pnl.`
+          );
+
+          // Health pills (källa: sources_health.json)
+          for (const pill of Array.from(el.querySelectorAll(".cc-pill[data-pill]"))){
+            const k = String(pill.getAttribute("data-pill") || "");
+            const item = (health || []).find(x => String(x.key || "") === k);
+            if (!item || !String(item.tip || "").trim()) continue;
+            pill.classList.add("hasTip");
+            pill.setAttribute("tabindex", "0");
+            pill.setAttribute("role", "note");
+            pill.dataset.tip = String(item.tip);
+          }
+
+          // Action Feed
+          attachTipAll(
+            ".cc-feed .cc-event",
+            `Action Feed\nKommer från ${tradesFile}: senaste ${feedMax} trades (senaste först).\nStatus (filled/skipped) och notes visar varför en trade blev/inte blev lagd.`
+          );
+        }catch(e){
+          el.innerHTML = `<p class="muted">Kunde inte ladda Command Center: <span class="mono">${escapeHtml(String(e))}</span></p>`;
+        }
+      }
+
       const csvBlocks = Array.from(contentEl.querySelectorAll("[data-csv]"));
       for (const el of csvBlocks){
         const file = el.getAttribute("data-csv");
         const maxRows = parseInt(el.getAttribute("data-max-rows") || "200", 10);
         try{
-          const r = await fetch(`./data/${file}`, { cache: "no-store" });
+          const r = await fetch(dataUrl(file), { cache: "no-store" });
           if (!r.ok) throw new Error(`${file} (${r.status})`);
           const lm = r.headers.get("Last-Modified");
           const lmMs = lm ? new Date(lm).getTime() : NaN;
@@ -1025,7 +1987,7 @@
       for (const el of jsonBlocks){
         const file = el.getAttribute("data-json");
         try{
-          const r = await fetch(`./data/${file}`, { cache: "no-store" });
+          const r = await fetch(dataUrl(file), { cache: "no-store" });
           if (!r.ok) throw new Error(`${file} (${r.status})`);
           const lm = r.headers.get("Last-Modified");
           const lmMs = lm ? new Date(lm).getTime() : NaN;
@@ -1041,7 +2003,7 @@
       for (const el of paperBlocks){
         const file = el.getAttribute("data-paper-portfolio");
         try{
-          const r = await fetch(`./data/${file}`, { cache: "no-store" });
+          const r = await fetch(dataUrl(file), { cache: "no-store" });
           if (!r.ok) throw new Error(`${file} (${r.status})`);
           const lm = r.headers.get("Last-Modified");
           const lmMs = lm ? new Date(lm).getTime() : NaN;
@@ -1286,7 +2248,7 @@
                 <div>
                   <p class="name">Market Lag</p>
                   <p class="val mono">${escapeHtml(fmtMs(lagMs))}</p>
-                  <p class="hint">PM efter Kraken (est)</p>
+                  <p class="hint">PM eftersläp (est)</p>
                 </div>
               </div>
               <div class="gauge">
@@ -1343,6 +2305,59 @@
         }catch(e){
           el.innerHTML = `<p class="muted">Kunde inte ladda missed opportunities: <span class="mono">${escapeHtml(String(e))}</span></p>`;
         }
+      }
+
+      // Make wide tables easy to scroll horizontally (mouse-drag support).
+      enableHorizontalDragScroll(contentEl);
+    }
+
+    function enableHorizontalDragScroll(rootEl){
+      const wraps = Array.from(rootEl.querySelectorAll(".tablewrap"));
+      for (const wrap of wraps){
+        if (wrap.dataset.dragScrollInit === "1") continue;
+        wrap.dataset.dragScrollInit = "1";
+
+        let isDown = false;
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+        let startLeft = 0;
+
+        wrap.addEventListener("pointerdown", (e) => {
+          if (e.button !== 0) return; // left-click only
+          isDown = true;
+          isDragging = false;
+          startX = e.clientX;
+          startY = e.clientY;
+          startLeft = wrap.scrollLeft;
+          wrap.classList.add("dragging");
+          wrap.setPointerCapture(e.pointerId);
+        });
+
+        wrap.addEventListener("pointermove", (e) => {
+          if (!isDown) return;
+          const dx = e.clientX - startX;
+          const dy = e.clientY - startY;
+
+          // Only take over if user is primarily moving sideways.
+          if (!isDragging){
+            if (Math.abs(dx) < 6) return;
+            if (Math.abs(dy) > Math.abs(dx)) return;
+            isDragging = true;
+          }
+
+          e.preventDefault();
+          wrap.scrollLeft = startLeft - dx;
+        }, { passive: false });
+
+        const end = () => {
+          isDown = false;
+          isDragging = false;
+          wrap.classList.remove("dragging");
+        };
+        wrap.addEventListener("pointerup", end);
+        wrap.addEventListener("pointercancel", end);
+        wrap.addEventListener("pointerleave", end);
       }
     }
 

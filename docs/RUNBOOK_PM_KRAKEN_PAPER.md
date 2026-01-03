@@ -6,7 +6,7 @@ Det här dokumentet beskriver den minsta "paper"-kedjan:
 3) om edge passerar tröskel: skriv en signal + en “paper order log” till CSV
 4) portalen renderar CSV/JSON från `web/data/`
 
-Obs: Agenten stödjer nu även `lead_lag`-strategi där Kraken spot leder och Polymarket (CLOB) släpar. Den skriver samma portal-filer (`pm_paper_*`, `edge_signals_live.csv`, `pm_orders.csv`) så att spelar.eu kan visa paper-saldo, trades och edge i realtid.
+Obs: Agenten stödjer nu även `lead_lag`-strategi där ett extern referenspris (nuvarande implementation: Kraken spot) ofta leder och Polymarket (CLOB) släpar. Den skriver samma portal-filer (`pm_paper_*`, `edge_signals_live.csv`, `pm_orders.csv`) så att spelar.eu kan visa paper-saldo, trades och edge i realtid. Portalen använder Polymarket-only språk (inga Kraken-labels i UI).
 
 ## Konfig
 På VPS (eller lokalt) skapas env baserat på `vps/systemd/spelar-agent.env.example`.
@@ -43,6 +43,13 @@ Risk/sizing (orderbok-band):
 
 Stabilitet/säkerhet:
 - `FRESHNESS_MAX_AGE_SECS=60` (krav på fräscha inputs innan entry/exit)
+
+Valfritt: scale-in (mer “aktion” i paper)
+- `LEAD_LAG_SCALE_ON_ODDS_CHANGE_PCT=0.40`
+- `LEAD_LAG_SCALE_COOLDOWN_S=20`
+- `LEAD_LAG_SCALE_MAX_ADDS=3`
+- `LEAD_LAG_SCALE_SIZE_MULT=0.50`
+- `LEAD_LAG_SCALE_MAX_TOTAL_SHARES=50`
 
 Minsta market_map (exempel):
 ```json
@@ -81,6 +88,9 @@ Lead–lag skriver även paper-portfolio som portalen visar:
 - `pm_paper_positions.csv`
 - `pm_paper_trades.csv`
 - `pm_paper_candidates.csv` (debug: varför trades triggar/inte triggar)
+
+Schema-notis:
+- `pm_paper_positions.csv` har extra kolumner för scale-state: `adds`, `last_mid`, `last_scale_at`.
 
 ## Kör lokalt (Windows)
 - `python -m http.server 5173 --directory .\web`

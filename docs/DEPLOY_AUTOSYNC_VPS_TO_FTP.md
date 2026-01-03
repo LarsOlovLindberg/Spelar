@@ -1,5 +1,71 @@
 # Auto-sync: VPS → web/data → FTP
 
+## Alternativ (VPS-only, ingen FTP/SFTP): VPS → HTTPS POST → web/data
+
+Om webbhotellet blockerar FTP/SFTP från VPS (vanligt), kan du istället låta VPS:en POST:a snapshots till en PHP-endpoint på sajten.
+
+1) Deploya endpointen till webbhotellet:
+   - [web/trading/api/upload_stats.php](web/trading/api/upload_stats.php)
+
+2) Skapa en hemlig nyckel på webbhotellet (server-side):
+   - Antingen env-var `SPELAR_UPLOAD_API_KEY` (eller `MARKOV_UPLOAD_API_KEY`), eller
+   - en fil bredvid endpointen: `web/trading/api/upload_api_key.local` (innehåll = nyckeln)
+
+3) Sätt detta på VPS i `/etc/spelar-agent.env` och restart:a tjänsten:
+   - `UPLOAD_URL=https://spelar.eu/trading/api/upload_stats.php`
+   - `UPLOAD_API_KEY=...` (samma som server-side)
+
+Valfritt (rekommenderat): skicka alla uppdaterade filer i en enda POST (zip-bundle):
+- `UPLOAD_BUNDLE_ZIP=1`
+
+Agenten kommer då att ladda upp allowlistade filer (t.ex. `live_status.json`, `edge_signals_live.csv`) direkt till `web/data/` via HTTPS.
+
+## Rekommenderat (ingen lokal dator): VPS → FTP direkt
+
+Om du vill att allt ska gå "via VPS" (utan att din Windows-dator kör SCP/FTP), så kan agenten på VPS:en ladda upp portal-snapshots direkt till webbhotellets FTP.
+
+Detta kräver att FTP-credentials finns på VPS:en (i `/etc/spelar-agent.env`) och att `spelar-agent` är startad.
+
+### Hosting-gotcha (viktigt)
+
+Även om allt är korrekt konfigurerat kan vissa webbhotell **blockera FTP-inloggning från “server-IP”** (VPS) men tillåta FTP från din egen dator.
+
+Symptom:
+- `spelar-agent` loggar `ftp upload failed` och ofta `EOFError` eller att anslutningen “droppas” vid login.
+- Filer i `/opt/spelar_eu/vps/out/` uppdateras, men `/data/*` på sajten blir kvar på gamla timestamps.
+
+Åtgärd:
+- Rekommenderat: byt till **SFTP (port 22)** om det finns (spelar.eu svarar med `SSH-2.0-mod_sftp`). Det undviker ofta “FTP droppas vid login”-problemet.
+- Obs: SFTP kan kräva att webbhotellet **aktiverar SSH/SFTP** för kontot eller att du använder en **separat SFTP/SSH-användare** (inte alltid samma som FTP-user).
+- Alternativt: be webbhotellet att **whitelista VPS:ens utgående IP** (t.ex. `77.42.42.124`) för FTP-kontot.
+- Sista fallback: använd “Windows → VPS → FTP”-flödet (SCP + `deploy-ftp.ps1`).
+
+### Aktivera (engångssetup)
+
+Kör från repo-root (på din dator) för att kopiera in FTP-credentials till VPS:en och restart:a tjänsten:
+
+```powershell
+./scripts/vps-enable-ftp-upload.ps1 -VpsIp "77.42.42.124" -VpsUser "root" -ServiceName "spelar-agent"
+```
+
+Som standard sätter scriptet `FTP_PROTOCOL=sftp` och `FTP_PORT=22`. Om du vill tvinga klassisk FTP:
+
+```powershell
+./scripts/vps-enable-ftp-upload.ps1 -Protocol ftp -Port 21
+```
+
+### Verifiera
+
+```powershell
+./scripts/vps-check-ftp-upload.ps1 -VpsIp "77.42.42.124" -VpsUser "root" -ServiceName "spelar-agent"
+```
+
+Tips: Portalen visar färskhet via `Last-Modified` på `/data/*`.
+
+### Viktigt
+
+- När VPS-direkt-FTP är aktivt ska du INTE köra lokal autosync/Task Scheduler. Annars kan det bli "dragkamp" om vilka snapshots som senast laddats upp.
+
 Målet: få portalen att alltid visa färska (LIVE) siffror genom att:
 1) hämta snapshot-filer från VPS (SCP),
 2) lägga dem i `web/data/`,

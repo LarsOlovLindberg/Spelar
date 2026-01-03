@@ -12,13 +12,20 @@ class PolymarketClobPublic:
     You provide the base URL (default points at the public CLOB API).
     """
 
-    def __init__(self, *, base_url: str = "https://clob.polymarket.com", timeout_s: float = 10.0) -> None:
+    def __init__(
+        self,
+        *,
+        base_url: str = "https://clob.polymarket.com",
+        timeout_s: float = 10.0,
+        session: requests.Session | None = None,
+    ) -> None:
         self._base_url = base_url.rstrip("/")
         self._timeout_s = timeout_s
+        self._sess = session or requests.Session()
 
     def _get(self, path: str, *, params: dict[str, Any] | None = None) -> Any:
         url = f"{self._base_url}{path}"
-        resp = requests.get(url, params=params, timeout=self._timeout_s)
+        resp = self._sess.get(url, params=params, timeout=self._timeout_s)
         resp.raise_for_status()
         return resp.json()
 

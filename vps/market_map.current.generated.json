@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "markets": [
+    {
+      "name": "MicroStrategy sells any Bitcoin in 2025?",
+      "polymarket": {
+        "market_url": "https://polymarket.com/market/microstrategy-sell-any-bitcoin-in-2025",
+        "outcome": "Yes"
+      },
+      "kraken_spot": {
+        "pair": "XBTUSD"
+      }
+    }
+  ]
+}

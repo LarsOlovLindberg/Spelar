@@ -50,6 +50,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\deploy-ftp.ps1
 
 Scriptet laddar upp innehållet i `web/` till `remote_path`.
 
+Obs: vissa webbhotell tillåter FTP från din dator men **blockar FTP-inloggning från en VPS/server**.
+Om du vill köra “VPS → FTP direkt” och det fastnar med `EOFError`/inloggnings-problem i `spelar-agent`-loggarna, behöver webbhotellet ofta whitelista VPS-IP eller aktivera FTP från servermiljö.
+
 ## VPS → web/data (snapshots)
 
 - VPS-agenten skriver “latest” snapshots till `/opt/spelar_eu/vps/out/`.

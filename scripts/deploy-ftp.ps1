@@ -101,7 +101,10 @@ if ($IncludeFiles -and $IncludeFiles.Count -gt 0) {
       # Only deploy site content
       $_.FullName -notmatch "\\\.git\\" -and
       $_.FullName -notmatch "\\node_modules\\" -and
-      $_.FullName -notmatch "\\\.vscode\\"
+      $_.FullName -notmatch "\\\.vscode\\" -and
+      # Never deploy secrets (e.g. upload_api_key.local)
+      $_.Name -notlike "*.local" -and
+      $_.Name -notlike "*.local.*"
     }
 }
 

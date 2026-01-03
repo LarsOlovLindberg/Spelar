@@ -37,6 +37,30 @@ Målet är att identifiera “edge” i Polymarket genom att jämföra Polymarke
 - Kraken: beräkna vad det kostar att skydda sig om BTC ändå går mot/över 100k (options), och/eller skapa en dynamisk hedge via futures.
 - Om Polymarkets NO-pris + hedge-kostnad (inkl avgifter) ger en attraktiv profil relativt risk, kan det vara ett “läge”.
 
+## Alternativ edge: Polymarket "deadline ladder" (samma event, olika sluttid)
+
+Det finns en särskild typ av intern Polymarket-edge när två marknader beskriver samma händelse men med olika deadline, t.ex.:
+
+- A: "Kommer X hända *före* t1?" (tidigare sluttid)
+- B: "Kommer X hända *före* t2?" där t2 > t1 (senare sluttid)
+
+Logiken är monoton: om A inträffar så inträffar även B (A ⇒ B). Därför bör priset (implied p) uppfylla ungefär $p(A) \le p(B)$.
+
+Om marknaden bryter monotoniciteten (praktiskt: A är dyrare än B) kan man ibland bygga en struktur som både hedgar och kan ge "dubbel utdelning":
+
+- Köp (A) **NO**
+- Köp (B) **YES**
+
+Payoff (i tokens):
+
+- X händer före t1: A_NO=0, B_YES=1 → total 1
+- X händer mellan t1 och t2: A_NO=1, B_YES=1 → total 2 (dubbel win)
+- X händer aldrig före t2: A_NO=1, B_YES=0 → total 1
+
+Det är risk-minimerande eftersom du alltid får minst 1 i payoff; edge finns om inköpskostnaden är < 1 efter spread/fees.
+
+I den här repot kan du scanna efter sådana par med snapshots i `web/data/pm_scan_candidates.csv` (orderbook bid/ask) och scriptet `scripts/find_pm_deadline_edges.py`.
+
 ## Datakällor och integrationer (planerad)
 
 - Polymarket data:

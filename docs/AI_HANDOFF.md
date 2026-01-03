@@ -15,8 +15,10 @@ Det här dokumentet är skrivet för nästa AI (eller nästa person) som tar öv
 - `vps/`: Python-agent + connectors som skriver snapshots till `vps/out/` på VPS.
 
 Nyare strategi-moduler:
-- `vps/strategies/lead_lag.py`: lead–lag edge (Kraken spot leder, PM CLOB släpar).
-- `vps/connectors/kraken_spot_public.py`: minimal Kraken spot ticker-klient (public).
+- `vps/strategies/lead_lag.py`: lead–lag edge (extern referens/spot leder, PM CLOB släpar).
+- `vps/connectors/kraken_spot_public.py`: nuvarande implementation av referens/spot (Kraken public).
+
+Obs: UI/portalen är numera **Polymarket-only i text/diagnostik** (inga “Kraken …”-labels i webben), men backend kan fortfarande använda extern referens under huven.
 
 ## Portalen (UI)
 ### Router
@@ -40,6 +42,26 @@ Konvention:
   - `pm_paper_positions.csv`
   - `pm_paper_trades.csv`
   - `pm_paper_candidates.csv` (debug: varför trades inte triggar)
+
+### Scale-in (paper) på odds/prisrörelse
+Lead–lag-loopen kan “skala in” i en redan öppnad position om PM-mid rör sig i rätt riktning.
+
+- Triggar bara när man redan är i position.
+- Respekterar cooldown + max antal “adds” + max total shares.
+- Loggas tydligt i:
+  - `pm_paper_trades.csv` (notering innehåller `scale_in`)
+  - `pm_orders.csv`
+  - `edge_calculator_live.csv` (reason = `scale_in`)
+
+Nya env-vars (defaults i parentes):
+- `LEAD_LAG_SCALE_ON_ODDS_CHANGE_PCT` (0.40)
+- `LEAD_LAG_SCALE_COOLDOWN_S` (20)
+- `LEAD_LAG_SCALE_MAX_ADDS` (3)
+- `LEAD_LAG_SCALE_SIZE_MULT` (0.50)
+- `LEAD_LAG_SCALE_MAX_TOTAL_SHARES` (50)
+
+Schema-notis:
+- `pm_paper_positions.csv` har extra kolumner för scale-state: `adds`, `last_mid`, `last_scale_at`.
 
 ## Data pipeline: VPS → web/data → FTP
 ### VPS agent
@@ -73,6 +95,11 @@ Obs:
 - UI-ändringar kräver **full deploy av `web/`**.
 - Data-ändringar kan deployas **data-only**.
 
+Live-URL:er / paths (viktigt)
+- På prod ligger filerna i webbrooten (t.ex. `https://spelar.eu/index.html`, `https://spelar.eu/pages/strategy_about.html`).
+- `https://spelar.eu/web/...` kan vara 404 och är inte en garanti för deploy-status.
+- Vid misstänkt cache: testa med querystring, t.ex. `.../pages/strategy_about.html?x=TIMESTAMP`.
+
 ## Säkerhetsgates (live trading)
 All live-handel ska vara av som default och kräver explicit arming.
 
@@ -98,6 +125,13 @@ Lead–lag (kraken spot → pm clob) – viktiga env (översikt):
 - `LEAD_LAG_LOOKBACK_POINTS`, `LEAD_LAG_SPOT_MOVE_MIN_PCT`, `LEAD_LAG_EDGE_MIN_PCT`, `LEAD_LAG_EDGE_EXIT_PCT`, `LEAD_LAG_MAX_HOLD_SECS`
 - Orderbok-sizing: `LEAD_LAG_ENABLE_ORDERBOOK_SIZING`, `LEAD_LAG_SLIPPAGE_CAP`, `LEAD_LAG_MAX_FRACTION_OF_BAND_LIQUIDITY`, `LEAD_LAG_HARD_CAP_USDC`
 - Freshness-gate: `FRESHNESS_MAX_AGE_SECS`
+
+För “mer action” i paper (risk-on för att se aktivitet) har vi ibland kört extremt permissiva gates (obs: bara paper):
+- `LEAD_LAG_EDGE_MIN_PCT=0.0`
+- `LEAD_LAG_SPOT_MOVE_MIN_PCT=0.0`
+- `LEAD_LAG_NET_EDGE_MIN_PCT=-100.0`
+- `LEAD_LAG_SPREAD_COST_CAP_PCT=100.0`
+- `LEAD_LAG_MIN_TRADE_NOTIONAL_USDC=0.0`
 
 ## Viktiga output-filer (för health och “mapping green”)
 För att sync-mappen ska vara “grön” även utan secrets skriver agenten vissa snapshots som stubbar när den saknar credentials:
@@ -126,6 +160,13 @@ Lead–lag/paper (portal):
 - Apache index-prio:
   - Server kan föredra `index.php` före `index.html`.
   - `web/.htaccess` sätter `DirectoryIndex index.html index.php`.
+
+- Upload API key incident (lärdom):
+  - `web/trading/api/upload_api_key.local` ska **aldrig** vara publik/serve:ad.
+  - Skydd finns på två nivåer:
+    - `scripts/deploy-ftp.ps1` exkluderar `.local`/hemligheter från uppladdning.
+    - `web/.htaccess` blockerar servering av lokala/secret-filer.
+  - Om fil ändå råkat läcka på server: kör `scripts/ftp-delete.ps1 -RemoteFile "trading/api/upload_api_key.local"` och rotera nyckeln.
 
 - Polymarket Gamma parsing:
   - Gamma kan ibland returnera `outcomes`/`clobTokenIds` som JSON-encodade strängar.

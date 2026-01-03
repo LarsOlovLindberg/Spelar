@@ -6,6 +6,7 @@ kraken_keys.local.json
 .env.*
 vps_target.local.json
 vps/systemd/spelar-agent.env.local
+web/trading/api/upload_api_key.local
 backups/
 *.zip
 

@@ -68,6 +68,27 @@ class GammaMarket:
     clob_token_ids: list[str]
 
 
+@dataclass(frozen=True)
+class GammaMarketListing:
+    """Lightweight market listing from Gamma /markets.
+
+    Gamma fields evolve; this keeps only the basics plus a raw payload for extra metadata.
+    """
+
+    slug: str
+    question: str | None
+    outcomes: list[str]
+    clob_token_ids: list[str]
+    active: bool | None
+    closed: bool | None
+    end_date: str | None
+    created_at: str | None
+    volume_usd: float | None
+    liquidity_usd: float | None
+    category: str | None
+    raw: dict[str, Any]
+
+
 class PolymarketGammaPublic:
     def __init__(self, *, base_url: str = "https://gamma-api.polymarket.com", timeout_s: float = 20.0, session: requests.Session | None = None) -> None:
         self._base_url = base_url.rstrip("/")
@@ -79,6 +100,121 @@ class PolymarketGammaPublic:
         r = self._session.get(url, params=params or {}, timeout=self._timeout_s)
         r.raise_for_status()
         return r.json()
+
+    def list_markets(
+        self,
+        *,
+        limit: int = 200,
+        pages: int = 1,
+        offset: int = 0,
+        active: bool | None = True,
+        closed: bool | None = None,
+        order: str | None = "createdAt",
+        direction: str | None = "desc",
+        search: str | None = None,
+    ) -> list[GammaMarketListing]:
+        """List markets from Gamma.
+
+        Notes:
+        - Gamma API is not formally versioned here; params are best-effort.
+        - We tolerate response shapes: list, {data:[...]}, {markets:[...]}.
+        """
+
+        lim = max(1, min(int(limit), 500))
+        pg = max(1, min(int(pages), 20))
+        off = max(0, int(offset))
+
+        out: list[GammaMarketListing] = []
+        for i in range(pg):
+            params: dict[str, Any] = {"limit": lim, "offset": off + i * lim}
+            if active is not None:
+                params["active"] = "true" if active else "false"
+            if closed is not None:
+                params["closed"] = "true" if closed else "false"
+            if order:
+                # Some Gamma deployments use 'order'+'direction', others 'sort'.
+                params["order"] = str(order)
+                params["sort"] = str(order)
+            if direction:
+                params["direction"] = str(direction)
+            if search:
+                params["search"] = str(search)
+
+            data = self._get_json("/markets", params=params)
+            items_any: Any = data
+            if isinstance(data, dict):
+                data_d = cast(dict[str, Any], data)
+                if isinstance(data_d.get("data"), list):
+                    items_any = data_d.get("data")
+                elif isinstance(data_d.get("markets"), list):
+                    items_any = data_d.get("markets")
+                elif isinstance(data_d.get("results"), list):
+                    items_any = data_d.get("results")
+
+            if not isinstance(items_any, list):
+                break
+
+            page_items = cast(list[Any], items_any)
+            if not page_items:
+                break
+
+            for it_any in page_items:
+                if not isinstance(it_any, dict):
+                    continue
+                it = cast(dict[str, Any], it_any)
+
+                outcomes_any = it.get("outcomes") or it.get("outcomeNames") or it.get("outcome_names")
+                token_ids_any = it.get("clobTokenIds") or it.get("clob_token_ids")
+                question_any = it.get("question") or it.get("title") or it.get("name")
+                slug_any = it.get("slug")
+
+                outcomes_list = _coerce_str_or_list_to_list(outcomes_any)
+                token_ids_list = _coerce_str_or_list_to_list(token_ids_any)
+                outcomes = [str(x) for x in (outcomes_list or [])]
+                clob_token_ids = [str(x) for x in (token_ids_list or [])]
+
+                slug = str(slug_any or "").strip()
+                if not slug:
+                    continue
+
+                def _b(v: Any) -> bool | None:
+                    if v is None:
+                        return None
+                    if isinstance(v, bool):
+                        return bool(v)
+                    s = str(v).strip().lower()
+                    if s in {"true", "1", "yes"}:
+                        return True
+                    if s in {"false", "0", "no"}:
+                        return False
+                    return None
+
+                def _f(v: Any) -> float | None:
+                    try:
+                        if v is None:
+                            return None
+                        return float(v)
+                    except Exception:
+                        return None
+
+                out.append(
+                    GammaMarketListing(
+                        slug=slug,
+                        question=str(question_any) if question_any is not None else None,
+                        outcomes=outcomes,
+                        clob_token_ids=clob_token_ids,
+                        active=_b(it.get("active")),
+                        closed=_b(it.get("closed")),
+                        end_date=str(it.get("endDate") or it.get("end_date") or it.get("resolvedDate") or "") or None,
+                        created_at=str(it.get("createdAt") or it.get("created_at") or "") or None,
+                        volume_usd=_f(it.get("volumeNum") or it.get("volume") or it.get("volumeUSD") or it.get("volume_usd")),
+                        liquidity_usd=_f(it.get("liquidityNum") or it.get("liquidity") or it.get("liquidityUSD") or it.get("liquidity_usd")),
+                        category=str(it.get("category") or it.get("categoryName") or "") or None,
+                        raw=it,
+                    )
+                )
+
+        return out
 
     def get_market_by_slug(self, *, slug: str) -> GammaMarket:
         s = _extract_slug(slug)
@@ -124,17 +260,89 @@ class PolymarketGammaPublic:
         if outcomes_list is not None:
             outcomes = [str(x) for x in outcomes_list]
 
-        clob_token_ids: list[str] = []
+        token_ids: list[str] = []
         token_ids_list = _coerce_str_or_list_to_list(token_ids_any)
         if token_ids_list is not None:
-            clob_token_ids = [str(x) for x in token_ids_list]
+            token_ids = [str(x) for x in token_ids_list]
 
-        if not outcomes or not clob_token_ids or len(outcomes) != len(clob_token_ids):
-            raise ValueError(
-                f"Gamma market missing outcomes/clobTokenIds (or mismatched lengths). "
-                f"outcomes={len(outcomes)} token_ids={len(clob_token_ids)}"
-            )
+        return GammaMarket(
+            slug=str(market_obj.get("slug") or s),
+            question=str(question_any) if question_any is not None else None,
+            outcomes=outcomes,
+            clob_token_ids=token_ids,
+        )
 
+    def get_market_listing_by_token_id(self, *, token_id: str) -> GammaMarketListing | None:
+        """Fetch a Gamma market listing by CLOB token id.
+
+        Gamma supports filtering with `clob_token_ids=<token>`.
+        Returns a GammaMarketListing with `raw` preserved (includes fields like outcomePrices).
+        """
+
+        tid = str(token_id or "").strip()
+        if not tid:
+            return None
+
+        data = self._get_json("/markets", params={"clob_token_ids": tid, "limit": 1})
+        items_any: Any = data
+        if isinstance(data, dict):
+            data_d = cast(dict[str, Any], data)
+            if isinstance(data_d.get("data"), list):
+                items_any = data_d.get("data")
+        if not isinstance(items_any, list):
+            return None
+        items = cast(list[Any], items_any)
+        if not items:
+            return None
+        first_any = items[0]
+        if not isinstance(first_any, dict):
+            return None
+        it = cast(dict[str, Any], first_any)
+
+        outcomes_any = it.get("outcomes") or it.get("outcomeNames") or it.get("outcome_names")
+        token_ids_any = it.get("clobTokenIds") or it.get("clob_token_ids")
+        question_any = it.get("question") or it.get("title") or it.get("name")
+        slug_any = it.get("slug")
+
+        outcomes_list = _coerce_str_or_list_to_list(outcomes_any)
+        token_ids_list = _coerce_str_or_list_to_list(token_ids_any)
+        outcomes = [str(x) for x in (outcomes_list or [])]
+        clob_token_ids = [str(x) for x in (token_ids_list or [])]
+
+        def _b(v: Any) -> bool | None:
+            if v is None:
+                return None
+            if isinstance(v, bool):
+                return bool(v)
+            s = str(v).strip().lower()
+            if s in {"true", "1", "yes"}:
+                return True
+            if s in {"false", "0", "no"}:
+                return False
+            return None
+
+        def _f(v: Any) -> float | None:
+            try:
+                if v is None:
+                    return None
+                return float(v)
+            except Exception:
+                return None
+
+        return GammaMarketListing(
+            slug=str(slug_any or "").strip(),
+            question=str(question_any) if question_any is not None else None,
+            outcomes=outcomes,
+            clob_token_ids=clob_token_ids,
+            active=_b(it.get("active")),
+            closed=_b(it.get("closed")),
+            end_date=str(it.get("endDate") or it.get("end_date") or it.get("resolvedDate") or "") or None,
+            created_at=str(it.get("createdAt") or it.get("created_at") or "") or None,
+            volume_usd=_f(it.get("volumeNum") or it.get("volume") or it.get("volumeUSD") or it.get("volume_usd")),
+            liquidity_usd=_f(it.get("liquidityNum") or it.get("liquidity") or it.get("liquidityUSD") or it.get("liquidity_usd")),
+            category=str(it.get("category") or it.get("categoryName") or "") or None,
+            raw=it,
+        )
         return GammaMarket(
             slug=str(market_obj.get("slug") or s),
             question=str(question_any) if question_any is not None else None,

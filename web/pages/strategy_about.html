@@ -32,13 +32,13 @@
 <p class="muted">Tänk “eftersläpning”: som när en skylt på motorvägen uppdateras någon sekund efter att GPS:en redan visat avfarten.</p>
 
 <h3>Exakt strategi (lead–lag, microstructure)</h3>
-<p><strong>Syfte:</strong> utnyttja att Kraken spot ofta rör sig före Polymarket CLOB (orderboken) och att PM-priset “släpar”. Systemet försöker <em>inte</em> förutsäga slututfall; det försöker fånga kortvariga prisjusteringar.</p>
+<p><strong>Syfte:</strong> utnyttja att ett snabbare referenspris ibland rör sig före Polymarket CLOB (orderboken) och att PM-priset då kan “släpa”. Systemet försöker <em>inte</em> förutsäga slututfall; det försöker fånga kortvariga prisjusteringar.</p>
 
 <div class="grid">
   <div class="card" style="grid-column: span 12;">
     <h4>Inputs (per marknad)</h4>
     <ul>
-      <li><strong>Lead</strong>: Kraken spot pris för ett par (t.ex. <span class="mono">XBTUSD</span>).</li>
+      <li><strong>Lead</strong>: referenspris (spot) för ett par (t.ex. <span class="mono">XBTUSD</span>).</li>
       <li><strong>Lag</strong>: Polymarket CLOB best bid/ask och mid för en outcome-token.</li>
       <li><strong>Tid</strong>: tick-loop (typiskt var <span class="mono">INTERVAL_S</span> sekund).</li>
       <li><strong>Konfig</strong>: thresholds/gates via env (t.ex. <span class="mono">LEAD_LAG_*</span>, <span class="mono">FRESHNESS_MAX_AGE_SECS</span>).</li>
@@ -73,7 +73,7 @@
     <pre class="mono" style="white-space:pre-wrap;line-height:1.35;">
 for each market:
   1) fetch PM orderbook (bid/ask/mid)
-  2) fetch Kraken spot price (cached per pair per tick)
+  2) fetch spot/reference price (cached per pair per tick)
   3) update rolling history and compute:
        spot_ret_pct, pm_ret_pct, edge_pct
   4) compute spread_cost_pct from PM bid/ask

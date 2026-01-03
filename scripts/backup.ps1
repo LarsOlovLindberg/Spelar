@@ -13,6 +13,8 @@ if (-not (Test-Path -LiteralPath $outFull)) {
   New-Item -ItemType Directory -Path $outFull | Out-Null
 }
 
+$outFull = (Resolve-Path -LiteralPath $outFull).Path
+
 $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $zipPath = Join-Path $outFull "spelar_eu-backup-$stamp.zip"
 
@@ -31,7 +33,11 @@ try {
   if (Test-Path -LiteralPath $secret) { Remove-Item -LiteralPath $secret -Force }
 
   if (Test-Path -LiteralPath $zipPath) { Remove-Item -LiteralPath $zipPath -Force }
-  Compress-Archive -LiteralPath (Join-Path $tempDir "*") -DestinationPath $zipPath
+  Compress-Archive -Path (Join-Path $tempDir "*") -DestinationPath $zipPath -Force
+
+  if (-not (Test-Path -LiteralPath $zipPath)) {
+    throw "Backup zip was not created: $zipPath"
+  }
 
   Write-Host "Created backup: $zipPath"
 } finally {

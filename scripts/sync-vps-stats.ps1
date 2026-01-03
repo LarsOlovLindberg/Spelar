@@ -17,6 +17,20 @@
 
 $ErrorActionPreference = "Stop"
 
+function Resolve-FtpConfigPath([string]$repoRoot, [string]$FtpConfigPath) {
+  if ($FtpConfigPath -and $FtpConfigPath.Trim() -ne "") {
+    return $FtpConfigPath.Trim()
+  }
+  if ($env:SPELAR_FTP_CONFIG -and $env:SPELAR_FTP_CONFIG.Trim() -ne "") {
+    return $env:SPELAR_FTP_CONFIG.Trim()
+  }
+  $repoLocal = Join-Path $repoRoot "ftp_config.local.json"
+  if (Test-Path -LiteralPath $repoLocal) {
+    return $repoLocal
+  }
+  return ""
+}
+
 function Test-RequiredCommand([string]$Name) {
   $cmd = Get-Command $Name -ErrorAction SilentlyContinue
   if (-not $cmd) { throw "Missing required command '$Name'. Install Windows OpenSSH Client or ensure it is in PATH." }
@@ -79,13 +93,39 @@ function Invoke-SyncOnce {
   # Ensure per-run state (important in -Watch mode)
   $failed.Clear()
 
-  $remoteHost = Resolve-RemoteHostSpec -HostName $HostName -SshUser $SshUser
-  $syncedCount = 0
-  $includeForDeploy = New-Object System.Collections.Generic.List[string]
+  # Prevent overlapping runs (common with Task Scheduler minute triggers + FTP deploy time).
+  # Keep the lock outside OneDrive-backed folders to avoid sync clients holding exclusive handles.
+  $lockDir = Join-Path $env:LOCALAPPDATA "spelar_eu"
+  New-Item -ItemType Directory -Force -Path $lockDir | Out-Null
+  $lockPath = Join-Path $lockDir "autosync.lock"
+  $lockStream = $null
+  try {
+    $lockStream = [System.IO.File]::Open($lockPath, [System.IO.FileMode]::OpenOrCreate, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
+  } catch {
+    Write-Log "Another autosync appears to be running; exiting this run."
+    return
+  }
 
-  Write-Log "Sync start: remoteHost=$remoteHost RemoteRoot=$RemoteRoot mapping=$MappingFile deployDataOnly=$DeployDataOnly skipDeploy=$SkipDeploy scpExe=$scpExe"
-  Write-Log "KnownHostsPath=$KnownHostsPath IdentityFile=$IdentityFile"
-  Write-Host "Syncing" $mapping.files.Count "file(s) from" $remoteHost
+  try {
+    $remoteHost = Resolve-RemoteHostSpec -HostName $HostName -SshUser $SshUser
+    $syncedCount = 0
+    $includeForDeploy = New-Object System.Collections.Generic.List[string]
+
+    Write-Log "Sync start: remoteHost=$remoteHost RemoteRoot=$RemoteRoot mapping=$MappingFile deployDataOnly=$DeployDataOnly skipDeploy=$SkipDeploy scpExe=$scpExe"
+    Write-Log "KnownHostsPath=$KnownHostsPath IdentityFile=$IdentityFile"
+    Write-Host "Syncing" $mapping.files.Count "file(s) from" $remoteHost
+
+  function Invoke-ScpOnce([string[]]$scpArgs) {
+    $oldEap = $ErrorActionPreference
+    try {
+      # Avoid native stderr/nonzero exit becoming a terminating error under SYSTEM/task.
+      $ErrorActionPreference = "Continue"
+      $outText = & $scpExe @scpArgs 2>&1 | Out-String
+    } finally {
+      $ErrorActionPreference = $oldEap
+    }
+    return $outText
+  }
 
   foreach ($item in $mapping.files) {
     $remotePath = $item.remote
@@ -127,22 +167,33 @@ function Invoke-SyncOnce {
       )
     }
 
-    $oldEap = $ErrorActionPreference
-    try {
-      # Avoid native stderr/nonzero exit becoming a terminating error under SYSTEM/task.
-      $ErrorActionPreference = "Continue"
-      $outText = & $scpExe @scpArgs 2>&1 | Out-String
-    } finally {
-      $ErrorActionPreference = $oldEap
+    $attempt = 0
+    $outText = ""
+    $exitCode = 0
+    while ($true) {
+      $attempt++
+      $outText = Invoke-ScpOnce -scpArgs $scpArgs
+      $exitCode = $LASTEXITCODE
+      if ($outText -and $outText.Trim() -ne "") {
+        Write-Log ("scp output (attempt ${attempt}): " + $outText.Trim())
+      }
+
+      # Retry transient disconnects.
+      $isConnectionClosed = $false
+      if ($exitCode -eq 255) { $isConnectionClosed = $true }
+      if ($outText -match "Connection closed") { $isConnectionClosed = $true }
+
+      if ($isConnectionClosed -and $attempt -lt 3) {
+        Start-Sleep -Milliseconds (500 * $attempt)
+        continue
+      }
+      break
     }
-    if ($outText -and $outText.Trim() -ne "") {
-      Write-Log ("scp output: " + $outText.Trim())
-    }
-    if ($LASTEXITCODE -ne 0 -or -not (Test-Path $tmpPath)) {
+    if ($exitCode -ne 0 -or -not (Test-Path $tmpPath)) {
       $msg = "Missing/unreadable on VPS: $remoteFull"
       if ($Strict) { throw $msg }
       Write-Warning $msg
-      Write-Log ("scp failed exit=${LASTEXITCODE}: $msg")
+      Write-Log ("scp failed exit=${exitCode}: $msg")
       $failed.Add($remoteFull) | Out-Null
 
       # Prevent a handled scp failure from leaking out as the script process exit code.
@@ -150,7 +201,27 @@ function Invoke-SyncOnce {
       continue
     }
 
-    Move-Item -Force $tmpPath $localPath
+    # Replace safely: try to rename existing aside, then move tmp into place.
+    if (Test-Path -LiteralPath $localPath) {
+      $backupPath = ($localPath + ".prev")
+      try {
+        if (Test-Path -LiteralPath $backupPath) {
+          Remove-Item -Force -LiteralPath $backupPath -ErrorAction SilentlyContinue
+        }
+        Move-Item -Force -LiteralPath $localPath -Destination $backupPath
+      } catch {
+        # If the destination is locked (e.g., FTP upload reading), skip updating this file this run.
+        $msg = "Local file is in use; skipping update: $localName"
+        if ($Strict) { throw $msg }
+        Write-Warning $msg
+        Write-Log $msg
+        Remove-Item -Force -LiteralPath $tmpPath -ErrorAction SilentlyContinue
+        $failed.Add($localPath) | Out-Null
+        $global:LASTEXITCODE = 0
+        continue
+      }
+    }
+    Move-Item -Force -LiteralPath $tmpPath -Destination $localPath
     $syncedCount++
     $includeForDeploy.Add(("data/{0}" -f $localName)) | Out-Null
     Write-Log ("synced: $localName")
@@ -168,6 +239,7 @@ function Invoke-SyncOnce {
     }
 
     $deploy = Join-Path $repoRoot "scripts\deploy-ftp.ps1"
+    $effectiveFtpConfigPath = Resolve-FtpConfigPath -repoRoot $repoRoot -FtpConfigPath $FtpConfigPath
     if ($DeployDataOnly) {
       Write-Host "Deploying web/data via FTP (data-only)..."
       if ($includeForDeploy.Count -le 0) {
@@ -179,28 +251,47 @@ function Invoke-SyncOnce {
         LocalRoot = (Join-Path $repoRoot "web")
         IncludeFiles = $includeForDeploy.ToArray()
       }
-      if ($FtpConfigPath -and $FtpConfigPath.Trim() -ne "") {
-        $deployParams["ConfigPath"] = $FtpConfigPath
+      if ($effectiveFtpConfigPath -and $effectiveFtpConfigPath.Trim() -ne "") {
+        $deployParams["ConfigPath"] = $effectiveFtpConfigPath
       }
-      & $deploy @deployParams
+      try {
+        & $deploy @deployParams
+      } catch {
+        if ($Strict) { throw }
+        Write-Warning ("FTP deploy failed (data-only): " + $_.Exception.Message)
+        Write-Log ("FTP deploy failed (data-only): " + $_.Exception.Message)
+        $global:LASTEXITCODE = 0
+      }
     } else {
       Write-Host "Deploying web/ via FTP..."
       Write-Log "FTP deploy (full web/)"
-      if ($FtpConfigPath -and $FtpConfigPath.Trim() -ne "") {
-        & $deploy -ConfigPath $FtpConfigPath
-      } else {
-        & $deploy
+      try {
+        if ($effectiveFtpConfigPath -and $effectiveFtpConfigPath.Trim() -ne "") {
+          & $deploy -ConfigPath $effectiveFtpConfigPath
+        } else {
+          & $deploy
+        }
+      } catch {
+        if ($Strict) { throw }
+        Write-Warning ("FTP deploy failed (full): " + $_.Exception.Message)
+        Write-Log ("FTP deploy failed (full): " + $_.Exception.Message)
+        $global:LASTEXITCODE = 0
       }
     }
   }
 
   Write-Log ("Sync done: syncedCount=$syncedCount failedCount=" + $failed.Count)
 
-  # If we successfully synced at least one file, we consider the run successful unless -Strict.
-  # PowerShell will otherwise often exit with the last native command's code (scp), even if we handled it.
-  if (-not $Strict) {
-    if ($syncedCount -gt 0) {
-      $global:LASTEXITCODE = 0
+    # If we successfully synced at least one file, we consider the run successful unless -Strict.
+    # PowerShell will otherwise often exit with the last native command's code (scp), even if we handled it.
+    if (-not $Strict) {
+      if ($syncedCount -gt 0) {
+        $global:LASTEXITCODE = 0
+      }
+    }
+  } finally {
+    if ($lockStream) {
+      try { $lockStream.Dispose() } catch { }
     }
   }
 }
