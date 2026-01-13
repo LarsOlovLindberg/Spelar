@@ -12,6 +12,14 @@ Vi kör nu primärt `STRATEGY_MODE=pm_draw`: en Draw-fokuserad value/edge-strate
 bookmaker-implied baseline-sannolikhet för oavgjort mot Polymarkets Draw-pris (mid i CLOB).
 Portalen (copy + UI) är uppdaterad för att beskriva `pm_draw`.
 
+Viktiga lärdomar från dagens arbete:
+- För `pm_draw` fungerar Gamma discovery bäst via **`/events`** (embedded markets) snarare än `/markets`.
+  - Bakgrund: `/markets` har visat inkonsekvent/ignorerad `search` och missade ofta match-liknande marknader med Draw.
+  - Implementerat i agentens `pm_scan`-branch för `pm_draw` (flatten events → markets).
+  - Scanen är medvetet **bounded** (för att inte stalla): även om `PM_SCAN_LIMIT/PAGES` är stora cap:as events-scan.
+- Paper trading är bekräftat end-to-end: `pm_paper_*` fylls och kan deployas data-only.
+- En crash i paper mark-to-market ("cannot access local variable 'p'…") var en faktisk bug och är fixad.
+
 ## Repo-struktur (det viktigaste)
 - `web/index.html`: portalens shell + router + all JS/CSS (inline).
 - `web/pages/*.html`: sidfragment (inte fulla HTML-dokument) som laddas in i shell:en.
@@ -195,6 +203,29 @@ Lead–lag/paper (portal):
     - `scripts/deploy-ftp.ps1` exkluderar `.local`/hemligheter från uppladdning.
     - `web/.htaccess` blockerar servering av lokala/secret-filer.
   - Om fil ändå råkat läcka på server: kör `scripts/ftp-delete.ps1 -RemoteFile "trading/api/upload_api_key.local"` och rotera nyckeln.
+
+  - HTTP upload (server_missing_api_key):
+    - Symptom på VPS: loggar `HTTP 500: {"ok":false,"error":"server_missing_api_key"}`.
+    - Det påverkar inte FTP/data-only pipeline, men spammar loggar och gör att HTTP-upload vägen inte fungerar.
+    - Åtgärd: sätt korrekt `UPLOAD_API_KEY` (eller `SPELAR_UPLOAD_API_KEY`) i `/etc/spelar-agent.env`, eller disable:a upload genom att
+     ta bort `UPLOAD_URL`/API key (då blir `upload_enabled=false` i `live_status.json`).
+
+  - Paper crash fix (2026-01-13):
+    - Symptom: `pm_scanner_log.csv` fick rader med status=error och texten `cannot access local variable 'p' where it is not associated with a value`.
+    - Orsak: fel variabelnamn i paper MTM-loop (refererade `p` istället för positionsdict).
+    - Fix: `vps/vps_agent.py` använder nu `pos_any.get(...)` (se git diff).
+
+  ## Snabb checklista (för nästa AI)
+  1) Bekräfta att paper trades skrivs på VPS:
+    - `tail -n 20 /opt/spelar_eu/vps/out/pm_paper_trades.csv`
+    - `cat /opt/spelar_eu/vps/out/pm_paper_portfolio.json | head`
+  2) Sync + deploy data-only från Windows:
+    - `scripts/sync-vps-stats.ps1 -HostName root@77.42.42.124 -DeployDataOnly -MappingFile scripts/vps_sync_map_pm.json`
+    - (alternativt VS Code task: "Sync VPS snapshots -> web/data + FTP deploy (data-only)")
+  3) Verifiera live att filerna faktiskt uppdaterats:
+    - kör task "Verify live headers (HEAD)" (kontrollera Last-Modified)
+  4) Om scanning hittar "draw"-marknader men inga trades:
+    - kolla `pm_paper_candidates.csv`/`pm_orders.csv` för `decision/reason` (vanligt: throttled eller gates).
 
 - Polymarket Gamma parsing:
   - Gamma kan ibland returnera `outcomes`/`clobTokenIds` som JSON-encodade strängar.

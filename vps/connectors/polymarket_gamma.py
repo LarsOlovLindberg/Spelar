@@ -89,6 +89,26 @@ class GammaMarketListing:
     raw: dict[str, Any]
 
 
+@dataclass(frozen=True)
+class GammaEventListing:
+    """Lightweight event listing from Gamma /events.
+
+    Gamma events contain an embedded list of markets; this endpoint appears to include
+    match-style markets that are not always discoverable via /markets.
+    """
+
+    slug: str
+    title: str | None
+    category: str | None
+    active: bool | None
+    closed: bool | None
+    start_date: str | None
+    end_date: str | None
+    created_at: str | None
+    markets: list[dict[str, Any]]
+    raw: dict[str, Any]
+
+
 class PolymarketGammaPublic:
     def __init__(self, *, base_url: str = "https://gamma-api.polymarket.com", timeout_s: float = 20.0, session: requests.Session | None = None) -> None:
         self._base_url = base_url.rstrip("/")
@@ -217,6 +237,112 @@ class PolymarketGammaPublic:
                         volume_usd=_f(it.get("volumeNum") or it.get("volume") or it.get("volumeUSD") or it.get("volume_usd")),
                         liquidity_usd=_f(it.get("liquidityNum") or it.get("liquidity") or it.get("liquidityUSD") or it.get("liquidity_usd")),
                         category=str(it.get("category") or it.get("categoryName") or "") or None,
+                        raw=it,
+                    )
+                )
+
+        return out
+
+    def list_events(
+        self,
+        *,
+        limit: int = 200,
+        pages: int = 1,
+        offset: int = 0,
+        active: bool | None = None,
+        closed: bool | None = None,
+        order: str | None = None,
+        direction: str | None = None,
+        search: str | None = None,
+    ) -> list[GammaEventListing]:
+        """List events from Gamma /events.
+
+        Notes:
+        - Gamma's /events endpoint returns a list in some deployments.
+        - Param support varies; unknown params are ignored server-side.
+        """
+
+        lim = max(1, min(int(limit), 500))
+        pg = max(1, min(int(pages), 50))
+        off = max(0, int(offset))
+
+        out: list[GammaEventListing] = []
+        for i in range(pg):
+            params: dict[str, Any] = {"limit": lim, "offset": off + i * lim}
+            if active is not None:
+                params["active"] = "true" if active else "false"
+            if closed is not None:
+                params["closed"] = "true" if closed else "false"
+            if order:
+                params["order"] = str(order)
+                params["sort"] = str(order)
+            if direction:
+                params["direction"] = str(direction)
+            if search:
+                s = str(search)
+                params["search"] = s
+                params["searchTerm"] = s
+                params["search_term"] = s
+                params["query"] = s
+                params["q"] = s
+
+            data = self._get_json("/events", params=params)
+            items_any: Any = data
+            if isinstance(data, dict):
+                data_d = cast(dict[str, Any], data)
+                if isinstance(data_d.get("data"), list):
+                    items_any = data_d.get("data")
+                elif isinstance(data_d.get("events"), list):
+                    items_any = data_d.get("events")
+                elif isinstance(data_d.get("results"), list):
+                    items_any = data_d.get("results")
+
+            if not isinstance(items_any, list):
+                break
+
+            page_items = cast(list[Any], items_any)
+            if not page_items:
+                break
+
+            def _b(v: Any) -> bool | None:
+                if v is None:
+                    return None
+                if isinstance(v, bool):
+                    return bool(v)
+                s = str(v).strip().lower()
+                if s in {"true", "1", "yes"}:
+                    return True
+                if s in {"false", "0", "no"}:
+                    return False
+                return None
+
+            for it_any in page_items:
+                if not isinstance(it_any, dict):
+                    continue
+                it = cast(dict[str, Any], it_any)
+
+                slug = str(it.get("slug") or "").strip()
+                if not slug:
+                    continue
+
+                markets_any = it.get("markets")
+                markets: list[dict[str, Any]] = []
+                if isinstance(markets_any, list):
+                    for mk_any in cast(list[Any], markets_any):
+                        if isinstance(mk_any, dict):
+                            markets.append(cast(dict[str, Any], mk_any))
+
+                out.append(
+                    GammaEventListing(
+                        slug=slug,
+                        title=str(it.get("title") or it.get("name") or it.get("question") or "") or None,
+                        category=str(it.get("category") or it.get("categoryName") or "") or None,
+                        active=_b(it.get("active")),
+                        closed=_b(it.get("closed")),
+                        start_date=str(it.get("startDate") or it.get("start_date") or "") or None,
+                        end_date=str(it.get("endDate") or it.get("end_date") or "") or None,
+                        created_at=str(it.get("createdAt") or it.get("created_at") or "") or None,
+                        markets=markets,
                         raw=it,
                     )
                 )

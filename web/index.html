@@ -1360,14 +1360,14 @@
       const map = {
         // strategy / edge_calculator_live.csv
         // NOTE: some keys are legacy; keep aliases for older files.
-        "spot_move_too_small": "Trend too small",
-        "trend_move_too_small": "Trend too small",
-        "low_edge": "Edge too low",
-        "net_edge_too_low": "Net edge too low",
-        "spread_too_high": "Spread too high",
-        "insufficient_liquidity": "Insufficient liquidity",
-        "throttled": "Throttled",
-        "lag_too_short": "Lag too short",
+        "spot_move_too_small": "Trend för liten",
+        "trend_move_too_small": "Trend för liten",
+        "low_edge": "Edge för låg",
+        "net_edge_too_low": "Net edge för låg",
+        "spread_too_high": "Spread för hög",
+        "insufficient_liquidity": "För låg likviditet",
+        "throttled": "Throttlad",
+        "lag_too_short": "Lag för kort",
         "warmup": "Warmup",
         "stale_or_warmup": "Stale/Warmup",
         "avoid_price_zone": "Price filtered",
@@ -1381,6 +1381,10 @@
         "edge_exit": "Exit (edge faded)",
         "max_hold": "Exit (max hold)",
         "stop": "Exit (stop)",
+
+        // pm_draw
+        "draw_edge_too_small": "Draw-edge för liten",
+        "draw_too_expensive": "Draw för dyr",
       };
       return map[r] || r;
     }
@@ -1435,6 +1439,8 @@
         const tradesFile = el.getAttribute("data-trades") || "pm_paper_trades.csv";
         const edgeFile = el.getAttribute("data-edge") || "edge_calculator_live.csv";
         const positionsFile = el.getAttribute("data-positions") || "pm_paper_positions.csv";
+        const scanCandidatesFile = el.getAttribute("data-scan-candidates") || "pm_scan_candidates.csv";
+        const marketsIndexFile = el.getAttribute("data-markets-index") || "pm_markets_index.json";
         const sourcesFile = el.getAttribute("data-sources") || "";
         const feedMax = parseInt(el.getAttribute("data-feed-max") || "8", 10);
 
@@ -1458,6 +1464,24 @@
           const tradesText = await rTrades.text();
           const posText = await rPos.text();
           const edgeText = await rEdge.text();
+
+          // Optional: scan discovery (used to show what we're searching for / found)
+          let scanText = "";
+          try{
+            const rScan = await fetch(dataUrl(scanCandidatesFile), { cache: "no-store" });
+            if (rScan.ok) scanText = await rScan.text();
+          }catch{
+            scanText = "";
+          }
+
+          // Optional: markets index (not strictly required to render CC)
+          let marketsIndex = null;
+          try{
+            const rIdx = await fetch(dataUrl(marketsIndexFile), { cache: "no-store" });
+            if (rIdx.ok) marketsIndex = await rIdx.json();
+          }catch{
+            marketsIndex = null;
+          }
 
           let sources = null;
           if (sourcesFile){
@@ -1495,6 +1519,22 @@
           const marketLagMs = tryParseNumber(live?.market_lag_ms);
           const systemLatencyMs = tryParseNumber(live?.system_latency_ms);
           const killswitch = (live?.killswitch ?? live?.kill_switch);
+
+          // Scan settings (best-effort; makes intent visible)
+          const scanEnabled = (live?.pm_scan_enable ?? live?.scan_enable);
+          const scanSearch = String(live?.pm_scan_search ?? live?.scan_search ?? "").trim();
+          const scanOrder = String(live?.pm_scan_order ?? live?.scan_order ?? "").trim();
+          const scanDirection = String(live?.pm_scan_direction ?? live?.scan_direction ?? "").trim();
+          const scanBinaryOnly = (live?.pm_scan_binary_only ?? live?.scan_binary_only);
+
+          // pm_draw settings (best-effort; makes targets visible)
+          const drawEdgeMin = tryParseNumber(live?.pm_draw_edge_min_pct);
+          const drawEdgeExit = tryParseNumber(live?.pm_draw_edge_exit_pct);
+          const drawMaxPrice = tryParseNumber(live?.pm_draw_max_price);
+          const drawRequire3way = live?.pm_draw_require_3way;
+          const drawFavMin = tryParseNumber(live?.pm_draw_fav_min);
+          const drawFavMax = tryParseNumber(live?.pm_draw_fav_max);
+          const drawBaselineFile = String(live?.pm_draw_baseline_file ?? "").trim();
 
           // Positions summary
           const posRows = parseCsv(posText);
@@ -1705,6 +1745,78 @@
           const exposureStr = Number.isFinite(posValue) && posValue > 0 ? `$${fmt2(posValue)}` : "–";
           const mappedStr = Number.isFinite(mapped) ? String(Math.round(mapped)) : "–";
 
+          // Scan candidates summary (best-effort)
+          let scanCount = NaN;
+          let scanDrawCount = NaN;
+          let scanLatestAgeMs = NaN;
+          let scanLatestTs = "";
+          let scanDrawListHtml = "";
+          try{
+            if (scanText && String(scanText).trim()){
+              const scanRows = parseCsv(scanText);
+              const scanHead = (scanRows[0] || []).map(h => String(h || "").toLowerCase());
+              const scanBody = scanRows.slice(1);
+              scanCount = Math.max(0, scanBody.length);
+
+              const sCol = (name) => scanHead.indexOf(name);
+              const sTs = sCol("ts");
+              const sQ = sCol("question");
+              const sOut = sCol("outcomes");
+              const sEnd = sCol("end_date");
+
+              const isDrawRow = (r) => {
+                const out = sOut >= 0 ? String(r[sOut] ?? "") : "";
+                const q = sQ >= 0 ? String(r[sQ] ?? "") : "";
+                return /\bdraw\b/i.test(out) || /\bdraw\b/i.test(q);
+              };
+
+              const drawRows = scanBody.filter(isDrawRow);
+              scanDrawCount = drawRows.length;
+
+              if (scanBody.length && sTs >= 0){
+                scanLatestTs = String(scanBody[0][sTs] ?? "");
+                const ms = parseTimestampMs(scanLatestTs);
+                scanLatestAgeMs = Number.isFinite(ms) ? Math.max(0, Date.now() - ms) : NaN;
+              }
+
+              const shown = drawRows.slice(0, 6);
+              scanDrawListHtml = shown.length
+                ? shown.map(r => {
+                    const q = sQ >= 0 ? String(r[sQ] ?? "") : "";
+                    const out = sOut >= 0 ? String(r[sOut] ?? "") : "";
+                    const end = sEnd >= 0 ? String(r[sEnd] ?? "") : "";
+                    const meta = [out, end].filter(Boolean).join(" · ");
+                    return `
+                      <div class="cc-event" style="margin:0">
+                        <div class="left">
+                          <p class="title">${escapeHtml(q || "(okänd market)")}</p>
+                          <p class="meta">${escapeHtml(meta || "–")}</p>
+                        </div>
+                      </div>
+                    `;
+                  }).join("")
+                : `<p class="muted" style="margin:0">Inga draw-kandidater i senaste scan.</p>`;
+            }
+          }catch{
+            scanCount = NaN;
+            scanDrawCount = NaN;
+            scanLatestAgeMs = NaN;
+            scanLatestTs = "";
+            scanDrawListHtml = "";
+          }
+
+          const seekKpi = (String(strategyMode).toLowerCase() === "pm_draw") ? "Söker DRAW" : "Söker";
+          const scanAgeStr = Number.isFinite(scanLatestAgeMs) ? formatAge(scanLatestAgeMs) : "–";
+          const scanCountStr = Number.isFinite(scanCount) ? String(Math.round(scanCount)) : "–";
+          const scanDrawCountStr = Number.isFinite(scanDrawCount) ? String(Math.round(scanDrawCount)) : "–";
+          const scanEnabledStr = (scanEnabled === null || scanEnabled === undefined) ? "–" : (scanEnabled ? "ON" : "OFF");
+          const scanBinaryStr = (scanBinaryOnly === null || scanBinaryOnly === undefined) ? "–" : (scanBinaryOnly ? "1" : "0");
+          const drawEdgeMinStr = Number.isFinite(drawEdgeMin) ? `${fmt2(drawEdgeMin)}%` : "–";
+          const drawMaxPriceStr = Number.isFinite(drawMaxPrice) ? `$${drawMaxPrice.toFixed(3)}` : "–";
+          const drawFavStr = (Number.isFinite(drawFavMin) || Number.isFinite(drawFavMax))
+            ? `${Number.isFinite(drawFavMin) ? drawFavMin.toFixed(2) : "–"}–${Number.isFinite(drawFavMax) ? drawFavMax.toFixed(2) : "–"}`
+            : "–";
+
           const health = (() => {
             const pmClobOk = Boolean(sources?.polymarket?.clob?.ok);
             const pmGammaOk = Boolean(sources?.polymarket?.gamma?.ok);
@@ -1752,9 +1864,47 @@
                 </div>
                 <div class="cc-metric cc-now">
                   <h4>Just nu</h4>
-                  <div class="mono kpi">Söker</div>
+                  <div class="mono kpi">${escapeHtml(seekKpi)}</div>
                   <p class="cc-mini">Senast tick: <span class="mono">${escapeHtml(Number.isFinite(liveAgeMs) ? formatAge(liveAgeMs) : "–")}</span></p>
                 </div>
+              </div>
+
+              <div class="cc-section">
+                <h4>Vad vi söker (pm_draw)</h4>
+                <p class="muted" style="margin:0">Vi letar efter matchmarknader där <strong>DRAW</strong> är billigare på Polymarket än vår baseline-probabilitet.</p>
+                <div class="cc-facts" style="margin-top:10px">
+                  <div class="cc-fact">
+                    <div class="label">Scan</div>
+                    <div class="value mono">${escapeHtml(scanEnabledStr)}</div>
+                    <div class="sub">Binary-only: <span class="mono">${escapeHtml(scanBinaryStr)}</span></div>
+                  </div>
+                  <div class="cc-fact">
+                    <div class="label">Sökord</div>
+                    <div class="value mono">${escapeHtml(scanSearch || "–")}</div>
+                    <div class="sub">${escapeHtml([scanOrder, scanDirection].filter(Boolean).join(" · ") || "–")}</div>
+                  </div>
+                  <div class="cc-fact">
+                    <div class="label">Draw-gate</div>
+                    <div class="value mono">${escapeHtml(drawEdgeMinStr)}</div>
+                    <div class="sub">Max price: <span class="mono">${escapeHtml(drawMaxPriceStr)}</span></div>
+                  </div>
+                  <div class="cc-fact">
+                    <div class="label">Fav-filter</div>
+                    <div class="value mono">${escapeHtml(drawFavStr)}</div>
+                    <div class="sub">Require 3-way: <span class="mono">${escapeHtml((drawRequire3way === null || drawRequire3way === undefined) ? "–" : String(drawRequire3way))}</span></div>
+                  </div>
+                  <div class="cc-fact wide">
+                    <div class="label">Baseline</div>
+                    <div class="value mono">${escapeHtml(drawBaselineFile || "(fallback)")}</div>
+                    <div class="sub">(Fallback) p kommer från live_status.json om fil saknas</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="cc-section">
+                <h4>Vad vi hittat (senaste scan)</h4>
+                <p class="muted" style="margin:0">Källa: <span class="mono">${escapeHtml(scanCandidatesFile)}</span> · Senast: <span class="mono">${escapeHtml(scanAgeStr)}</span> · Kandidater: <span class="mono">${escapeHtml(scanCountStr)}</span> · Med Draw: <span class="mono">${escapeHtml(scanDrawCountStr)}</span></p>
+                <div class="cc-feed" style="margin-top:10px">${scanDrawListHtml || `<p class="muted" style="margin:0">Ingen scan-data.</p>`}</div>
               </div>
 
               <div class="cc-section" style="margin-top:14px">

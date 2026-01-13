@@ -71,8 +71,8 @@ $vars["PM_SCAN_ORDERBOOK_SAMPLE"] = "$OrderbookSample"
 $vars["PM_SCAN_ORDER"] = "$Order"
 $vars["PM_SCAN_DIRECTION"] = "$Direction"
 $vars["PM_SCAN_OFFSET"] = "$([Math]::Max(0, $Offset))"
-$vars["PM_SCAN_ACTIVE_ONLY"] = $(if ($ActiveOnly) { "1" } else { "1" })
-$vars["PM_SCAN_BINARY_ONLY"] = $(if ($BinaryOnly) { "1" } else { "1" })
+$vars["PM_SCAN_ACTIVE_ONLY"] = $(if ($ActiveOnly) { "1" } else { "0" })
+$vars["PM_SCAN_BINARY_ONLY"] = $(if ($BinaryOnly) { "1" } else { "0" })
 $vars["PM_SCAN_USE_FOR_TRADING"] = $(if ($UseForTrading) { "1" } else { "0" })
 $vars["PM_SCAN_TRADE_MAX_MARKETS"] = "20"
 

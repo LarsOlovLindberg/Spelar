@@ -1602,9 +1602,10 @@ def write_outputs(  # pyright: ignore
                         flush=True,
                     )
                     t_scan0 = time.perf_counter()
-                    # Gamma's /markets search behavior has historically varied.
-                    # For draw trading, try a few draw-related searches (and a no-search fallback)
-                    # then dedupe by slug.
+                    # Gamma's /markets search behavior is inconsistent (often ignored).
+                    # For draw trading, we prefer /events because it includes match-style markets
+                    # embedded under events (and those are frequently missing from /markets scans).
+                    # We still keep search_terms for local filtering / heuristics.
                     search_terms: list[str | None]
                     if pm_scan_search is not None:
                         search_terms = [pm_scan_search]
@@ -1615,35 +1616,159 @@ def write_outputs(  # pyright: ignore
 
                     markets_by_slug: dict[str, GammaMarketListing] = {}
                     # If search is ignored upstream, scanning more offsets still discovers more markets.
-                    extra_blocks = 3 if cfg.strategy_mode == "pm_draw" else 1
+                    # For pm_draw, we need deeper offsets to reach match/event style markets.
+                    extra_blocks = 10 if cfg.strategy_mode == "pm_draw" else 1
                     try:
                         extra_blocks = int(os.getenv("PM_SCAN_EXTRA_BLOCKS", str(extra_blocks)) or str(extra_blocks))
                     except Exception:
-                        extra_blocks = 3 if cfg.strategy_mode == "pm_draw" else 1
+                        extra_blocks = 10 if cfg.strategy_mode == "pm_draw" else 1
                     extra_blocks = max(1, min(int(extra_blocks), 10))
                     block_size = int(pm_scan_limit) * int(pm_scan_pages)
 
-                    for st in search_terms:
-                        try:
+                    def _matches_local_filter(*, text: str, term: str | None) -> bool:
+                        if term is None:
+                            return True
+                        t = str(text or "").lower()
+                        needle = str(term).lower()
+                        return needle in t
+
+                    if cfg.strategy_mode == "pm_draw":
+                        # Use /events, then flatten embedded markets.
+                        from vps.strategies.pm_draw import is_draw_market_question, is_draw_outcome, is_likely_match_question
+
+                        def _coerce_to_list(value: Any) -> list[Any]:
+                            if value is None:
+                                return []
+                            if isinstance(value, list):
+                                return cast(list[Any], value)
+                            if isinstance(value, str):
+                                s = value.strip()
+                                if not s:
+                                    return []
+                                if (s.startswith("[") and s.endswith("]")) or (s.startswith("{") and s.endswith("}")):
+                                    try:
+                                        parsed = json.loads(s)
+                                        if isinstance(parsed, list):
+                                            return cast(list[Any], parsed)
+                                    except Exception:
+                                        return []
+                                if "|" in s:
+                                    return [p.strip().strip('"\'') for p in s.split("|") if p.strip()]
+                                if "," in s:
+                                    return [p.strip().strip('"\'') for p in s.split(",") if p.strip()]
+                                return [s]
+                            return []
+
+                        # /events is much heavier than /markets (embedded markets per event). Keep it bounded
+                        # even if PM_SCAN_LIMIT/PAGES are set high for the old /markets-based scan.
+                        ev_limit = max(1, min(int(pm_scan_limit), 200))
+                        ev_pages = max(1, min(int(pm_scan_pages), 2))
+                        ev_block_size = int(ev_limit) * int(ev_pages)
+
+                        for st in search_terms:
                             for block_i in range(int(extra_blocks)):
-                                ms = gamma.list_markets(
-                                    limit=pm_scan_limit,
-                                    pages=pm_scan_pages,
-                                    offset=int(pm_scan_offset) + int(block_i) * int(block_size),
-                                    # Gamma's `active` flag is not a reliable proxy for "currently open".
-                                    # Filtering on `closed=false` is what yields current markets.
-                                    active=None,
-                                    closed=False if pm_scan_active_only else None,
-                                    order=pm_scan_order,
-                                    direction=pm_scan_direction,
-                                    search=st,
-                                )
-                                for m in ms:
-                                    if m.slug and m.slug not in markets_by_slug:
-                                        markets_by_slug[m.slug] = m
-                        except Exception:
-                            # If a search term is not supported, fall back to other terms.
-                            continue
+                                try:
+                                    evs = gamma.list_events(
+                                        limit=ev_limit,
+                                        pages=ev_pages,
+                                        offset=int(pm_scan_offset) + int(block_i) * int(ev_block_size),
+                                        active=None,
+                                        closed=False if pm_scan_active_only else None,
+                                        order=None,
+                                        direction=None,
+                                        search=st,
+                                    )
+                                except Exception:
+                                    continue
+
+                                for ev in evs:
+                                    ev_title = (ev.title or ev.slug or "")
+                                    if not _matches_local_filter(text=ev_title, term=st):
+                                        continue
+
+                                    for mk in (ev.markets or []):
+                                        try:
+                                            slug = str(mk.get("slug") or "").strip()
+                                            if not slug or slug in markets_by_slug:
+                                                continue
+                                            q_any = mk.get("question") or mk.get("title") or mk.get("name")
+                                            q = str(q_any) if q_any is not None else None
+
+                                            outs_any = mk.get("outcomes") or mk.get("outcomeNames") or mk.get("outcome_names")
+                                            toks_any = mk.get("clobTokenIds") or mk.get("clob_token_ids")
+
+                                            outs = [str(x) for x in _coerce_to_list(outs_any)]
+                                            toks = [str(x) for x in _coerce_to_list(toks_any)]
+                                            if not toks:
+                                                continue
+
+                                            # Local relevance filter: keep only markets that look like match questions
+                                            # and that either have an explicit draw outcome (3-way) or are draw/tie propositions (binary Yes/No).
+                                            if not is_likely_match_question(q):
+                                                continue
+                                            has_draw_outcome = any(is_draw_outcome(o) for o in outs)
+                                            is_draw_prop = is_draw_market_question(q)
+                                            if not (has_draw_outcome or is_draw_prop):
+                                                continue
+
+                                            def _b(v: Any) -> bool | None:
+                                                if v is None:
+                                                    return None
+                                                if isinstance(v, bool):
+                                                    return bool(v)
+                                                s = str(v).strip().lower()
+                                                if s in {"true", "1", "yes"}:
+                                                    return True
+                                                if s in {"false", "0", "no"}:
+                                                    return False
+                                                return None
+
+                                            def _f(v: Any) -> float | None:
+                                                try:
+                                                    if v is None:
+                                                        return None
+                                                    return float(v)
+                                                except Exception:
+                                                    return None
+
+                                            markets_by_slug[slug] = GammaMarketListing(
+                                                slug=slug,
+                                                question=q,
+                                                outcomes=outs,
+                                                clob_token_ids=toks,
+                                                active=_b(mk.get("active")),
+                                                closed=_b(mk.get("closed")),
+                                                end_date=str(mk.get("endDate") or mk.get("end_date") or ev.end_date or "") or None,
+                                                created_at=str(mk.get("createdAt") or mk.get("created_at") or ev.created_at or "") or None,
+                                                volume_usd=_f(mk.get("volumeNum") or mk.get("volume") or mk.get("volumeUSD") or mk.get("volume_usd")),
+                                                liquidity_usd=_f(mk.get("liquidityNum") or mk.get("liquidity") or mk.get("liquidityUSD") or mk.get("liquidity_usd")),
+                                                category=str(mk.get("category") or mk.get("categoryName") or ev.category or "") or None,
+                                                raw=mk,
+                                            )
+                                        except Exception:
+                                            continue
+                    else:
+                        for st in search_terms:
+                            try:
+                                for block_i in range(int(extra_blocks)):
+                                    ms = gamma.list_markets(
+                                        limit=pm_scan_limit,
+                                        pages=pm_scan_pages,
+                                        offset=int(pm_scan_offset) + int(block_i) * int(block_size),
+                                        # Gamma's `active` flag is not a reliable proxy for "currently open".
+                                        # Filtering on `closed=false` is what yields current markets.
+                                        active=None,
+                                        closed=False if pm_scan_active_only else None,
+                                        order=pm_scan_order,
+                                        direction=pm_scan_direction,
+                                        search=st,
+                                    )
+                                    for m in ms:
+                                        if m.slug and m.slug not in markets_by_slug:
+                                            markets_by_slug[m.slug] = m
+                            except Exception:
+                                # If a search term is not supported, fall back to other terms.
+                                continue
 
                     markets = list(markets_by_slug.values())
                     scan_ms = float((time.perf_counter() - t_scan0) * 1000.0)
@@ -5414,14 +5539,14 @@ def write_outputs(  # pyright: ignore
             unrealized += upnl
             equity += value
             try:
-                adds = int(p.get("adds") or 0)
+                adds = int(pos_any.get("adds") or 0)
             except Exception:
                 adds = 0
             try:
-                last_mid = float(p.get("last_mid") or lp)
+                last_mid = float(pos_any.get("last_mid") or lp)
             except Exception:
                 last_mid = lp
-            last_scale_at = str(p.get("last_scale_at") or "")
+            last_scale_at = str(pos_any.get("last_scale_at") or "")
             mtm_rows.append([ts, mname, tok, outcome, shares, avg_entry, lp, value, upnl, adds, last_mid, last_scale_at])
 
         write_csv(
