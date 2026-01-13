@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>spelar.eu</title>
-  <meta name="description" content="Systematisk, riskkontrollerad trendhandel på Polymarket." />
+  <meta name="description" content="Systematisk, riskkontrollerad edge-handel på oavgjort (Draw) via Polymarket." />
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -943,7 +943,7 @@
         section: "Engine Room",
         items: [
           { id:"transparency-data", label:"Engine Room", route:"#/data", page:"transparency_data.html", badge:"", showNotice:false, showOps:true,
-            dataFiles:["live_status.json","polymarket_status.json","pm_paper_portfolio.json","pm_paper_positions.csv","pm_paper_trades.csv","edge_signals_live.csv","edge_calculator_live.csv","lead_lag_health.json","pm_paper_candidates.csv"] }
+            dataFiles:["live_status.json","polymarket_status.json","pm_paper_portfolio.json","pm_paper_positions.csv","pm_paper_trades.csv","edge_signals_live.csv","edge_calculator_live.csv","lead_lag_health.json","pm_paper_candidates.csv","pm_scan_candidates.csv","pm_markets_index.json"] }
         ]
       }
     ];
@@ -1859,7 +1859,7 @@
                   <div class="cc-fact cc-fact-lag">
                     <div class="label">Market lag (om finns)</div>
                     <div class="value mono">${escapeHtml(lagStr)}</div>
-                    <div class="sub">Kan vara N/A i pm_trend</div>
+                    <div class="sub">Kan vara N/A beroende på mode</div>
                   </div>
                   <div class="cc-fact cc-fact-latency">
                     <div class="label">System latency</div>
@@ -1936,8 +1936,9 @@
           );
           attachTip(
             ".cc-fact-lag",
-            `Market lag\nKommer från ${liveFile}: fält market_lag_ms.\nTolkning: hur långt efter marknadsdata systemet ligger just nu.\nNot: kan saknas/N/A i pm_trend.`
+            `Market lag\nKommer från ${liveFile}: fält market_lag_ms.\nTolkning: hur långt efter marknadsdata systemet ligger just nu.\nNot: kan saknas/N/A beroende på mode.`
           );
+          
           attachTip(
             ".cc-fact-latency",
             `System latency\nKommer från ${liveFile}: fält system_latency_ms.\nTolkning: internt loop-/process-lag (inte samma som market lag).`
@@ -2073,12 +2074,32 @@
           const maxOrders = obj?.pm_max_orders_per_tick ?? obj?.max_orders_per_tick;
           const orderSize = obj?.pm_order_size_shares ?? obj?.order_size_shares;
 
-          // pm_trend params (preferred when present)
+          // Strategy params (preferred when present)
+          const drawEdgeMin = tryParseNumber(obj?.pm_draw_edge_min_pct);
+          const drawEdgeExit = tryParseNumber(obj?.pm_draw_edge_exit_pct);
+          const drawMaxPrice = tryParseNumber(obj?.pm_draw_max_price);
+          const drawRequire3way = obj?.pm_draw_require_3way;
+          const drawFavMin = tryParseNumber(obj?.pm_draw_fav_min);
+          const drawFavMax = tryParseNumber(obj?.pm_draw_fav_max);
+          const drawBaselineP = tryParseNumber(obj?.pm_draw_baseline_p);
+          const drawBookProbMult = tryParseNumber(obj?.pm_draw_book_prob_mult);
+          const drawBaselineFile = obj?.pm_draw_baseline_file;
+
           const trendLookback = tryParseNumber(obj?.pm_trend_lookback_points);
           const trendMoveMin = tryParseNumber(obj?.pm_trend_move_min_pct);
           const trendExitMoveMin = tryParseNumber(obj?.pm_trend_exit_move_min_pct);
           const trendAutoSide = obj?.pm_trend_auto_side;
           const hasTrendMeta = [trendLookback, trendMoveMin, trendExitMoveMin].some(Number.isFinite) || (trendAutoSide !== null && trendAutoSide !== undefined);
+
+          const hasDrawMeta = Boolean(
+            [drawEdgeMin, drawEdgeExit].some(Number.isFinite)
+            || Number.isFinite(drawMaxPrice)
+            || (drawRequire3way !== null && drawRequire3way !== undefined)
+            || [drawFavMin, drawFavMax].some(Number.isFinite)
+            || Number.isFinite(drawBaselineP)
+            || Number.isFinite(drawBookProbMult)
+            || (drawBaselineFile !== null && drawBaselineFile !== undefined && String(drawBaselineFile).trim())
+          );
 
           const netEdgeMin = tryParseNumber(obj?.lead_lag_net_edge_min_pct);
           const spreadCap = tryParseNumber(obj?.lead_lag_spread_cost_cap_pct);
@@ -2117,6 +2138,38 @@
                 '</span></p>' +
                 '<p class="muted">Min notional: <span class="mono">' +
                 escapeHtml(Number.isFinite(minNotional) ? ("$" + fmt2(minNotional)) : "–") +
+                '</span></p>'
+              )
+            : "";
+
+          const drawHtml = hasDrawMeta
+            ? (
+                '<p class="muted" style="margin-top:10px">pm_draw parameters</p>' +
+                '<p class="muted">Edge min: <span class="mono">' +
+                escapeHtml(Number.isFinite(drawEdgeMin) ? (drawEdgeMin.toFixed(3) + "%") : "–") +
+                '</span></p>' +
+                '<p class="muted">Edge exit: <span class="mono">' +
+                escapeHtml(Number.isFinite(drawEdgeExit) ? (drawEdgeExit.toFixed(3) + "%") : "–") +
+                '</span></p>' +
+                '<p class="muted">Max price: <span class="mono">' +
+                escapeHtml(Number.isFinite(drawMaxPrice) ? drawMaxPrice.toFixed(4) : "–") +
+                '</span></p>' +
+                '<p class="muted">Require 3-way: <span class="mono">' +
+                escapeHtml((drawRequire3way === null || drawRequire3way === undefined) ? "–" : String(drawRequire3way)) +
+                '</span></p>' +
+                '<p class="muted">Fav range: <span class="mono">' +
+                escapeHtml((Number.isFinite(drawFavMin) || Number.isFinite(drawFavMax))
+                  ? `${Number.isFinite(drawFavMin) ? drawFavMin.toFixed(4) : "–"}..${Number.isFinite(drawFavMax) ? drawFavMax.toFixed(4) : "–"}`
+                  : "–") +
+                '</span></p>' +
+                '<p class="muted">Baseline p: <span class="mono">' +
+                escapeHtml(Number.isFinite(drawBaselineP) ? `${drawBaselineP.toFixed(4)} (${(drawBaselineP * 100).toFixed(2)}%)` : "–") +
+                '</span></p>' +
+                '<p class="muted">Book prob mult: <span class="mono">' +
+                escapeHtml(Number.isFinite(drawBookProbMult) ? drawBookProbMult.toFixed(4) : "–") +
+                '</span></p>' +
+                '<p class="muted">Baseline file: <span class="mono">' +
+                escapeHtml((drawBaselineFile === null || drawBaselineFile === undefined) ? "–" : String(drawBaselineFile)) +
                 '</span></p>'
               )
             : "";
@@ -2168,7 +2221,7 @@
                 <h4>Strategy mode</h4>
                 <div class="mono kpi">${escapeHtml(strategyMode)}</div>
                 ${gatesHtml}
-                ${trendHtml || legacyMoveHtml}
+                ${drawHtml || trendHtml || legacyMoveHtml}
               </div>
               <div class="card">
                 <h4>Killswitch</h4>

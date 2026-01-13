@@ -1,5 +1,8 @@
 # PM Trend strategy (pm_trend)
 
+Note (2026-01-13): `pm_trend` is still supported, but the current primary strategy described on spelar.eu is `pm_draw`.
+See: `docs/PM_DRAW_STRATEGY.md`.
+
 Date: 2026-01-03
 
 This repo now supports a Polymarket-only trend-following strategy mode: `STRATEGY_MODE=pm_trend`.

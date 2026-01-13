@@ -6,7 +6,12 @@ Det här dokumentet beskriver den minsta "paper"-kedjan:
 3) om edge passerar tröskel: skriv en signal + en “paper order log” till CSV
 4) portalen renderar CSV/JSON från `web/data/`
 
-Obs: Agenten stödjer nu även `lead_lag`-strategi där ett extern referenspris (nuvarande implementation: Kraken spot) ofta leder och Polymarket (CLOB) släpar. Den skriver samma portal-filer (`pm_paper_*`, `edge_signals_live.csv`, `pm_orders.csv`) så att spelar.eu kan visa paper-saldo, trades och edge i realtid. Portalen använder Polymarket-only språk (inga Kraken-labels i UI).
+Obs: Agenten stödjer flera strategier:
+- `lead_lag`: extern referens (Kraken spot) leder, Polymarket (CLOB) släpar.
+- `pm_trend`: Polymarket-only trend.
+- `pm_draw`: Polymarket-only draw-value (baseline vs Draw-pris).
+
+Alla skriver samma portal-filer (`pm_paper_*`, `edge_signals_live.csv`, `pm_orders.csv`) så spelar.eu kan visa paper-saldo, trades och beslut i realtid.
 
 ## Konfig
 På VPS (eller lokalt) skapas env baserat på `vps/systemd/spelar-agent.env.example`.
@@ -96,7 +101,28 @@ Schema-notis:
 - `python -m http.server 5173 --directory .\web`
 - starta agent separat (om du vill testa lokalt):
   - sätt env i terminal
-  - kör `python -m vps.vps_agent`
+  - kör `python -m vps.vps_agent` (helst som modul; undvik `python .\vps\vps_agent.py`)
+
+### pm_draw (Draw value) – snabbstart (paper)
+
+Minsta:
+- `STRATEGY_MODE=pm_draw`
+- `TRADING_MODE=paper`
+
+Baseline:
+- Rekommenderat: `PM_DRAW_BASELINE_FILE=/etc/spelar_eu/pm_draw_baseline.csv` (på VPS) med kolumner `slug` och `draw_odds` eller `draw_prob`.
+- Fallback: `PM_DRAW_BASELINE_P=0.28`
+
+Trösklar (rimlig start):
+- `PM_DRAW_EDGE_MIN_PCT=2.0`
+- `PM_DRAW_EDGE_EXIT_PCT=0.5`
+- `PM_DRAW_MAX_PRICE=0.45`
+- `PM_DRAW_REQUIRE_3WAY=1`
+
+Universe discovery (om du inte vill hårdkoda market_map):
+- `PM_SCAN_ENABLE=1`
+- `PM_SCAN_USE_FOR_TRADING=1`
+- Låt `PM_SCAN_BINARY_ONLY` vara av (default i pm_draw), annars hittar du inga 3-way.
 
 ## Kör via VPS (Markov-style)
 - Upload + restart (default): `scripts/upload-to-vps.ps1`

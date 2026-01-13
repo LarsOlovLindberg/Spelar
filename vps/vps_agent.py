@@ -35,6 +35,14 @@ from vps.connectors.polymarket_clob_public import PolymarketClobPublic, best_bid
 from vps.connectors.kraken_spot_public import KrakenSpotPublic
 from vps.strategies.lead_lag import LeadLagEngine
 from vps.strategies.pm_trend import PmTrendEngine
+from vps.strategies.pm_draw import (
+    DrawBaseline,
+    is_draw_market_question,
+    is_draw_outcome,
+    is_likely_match_question,
+    load_draw_baseline,
+    resolve_token_id_from_listing,
+)
 from vps.connectors.polymarket_clob_trading import (
     PolymarketClobApiCreds,
     PolymarketClobLiveConfig,
@@ -448,7 +456,7 @@ class Config:
     interval_s: float
 
     # Strategy selection
-    strategy_mode: str  # fair_model|lead_lag|pm_trend
+    strategy_mode: str  # fair_model|lead_lag|pm_trend|pm_draw
 
     # public endpoints (optional)
     polymarket_public_url: str | None
@@ -498,6 +506,17 @@ class Config:
     pm_trend_move_min_pct: float
     pm_trend_exit_move_min_pct: float
     pm_trend_auto_side: bool
+
+    # PM draw value strategy (PM-only): compare PM draw price vs bookmaker-implied baseline.
+    pm_draw_baseline_file: Path | None
+    pm_draw_baseline_p: float
+    pm_draw_book_prob_mult: float
+    pm_draw_edge_min_pct: float
+    pm_draw_edge_exit_pct: float
+    pm_draw_max_price: float
+    pm_draw_require_3way: bool
+    pm_draw_fav_min: float
+    pm_draw_fav_max: float
 
     # Drift / stability
     freshness_max_age_s: float
@@ -622,6 +641,17 @@ def load_config() -> Config:
     pm_trend_move_min_pct = float(os.getenv("PM_TREND_MOVE_MIN_PCT", "0.10") or "0.10")
     pm_trend_exit_move_min_pct = float(os.getenv("PM_TREND_EXIT_MOVE_MIN_PCT", "0.00") or "0.00")
     pm_trend_auto_side = (os.getenv("PM_TREND_AUTO_SIDE", "1") or "1").strip().lower() not in {"0", "false", "no"}
+
+    pm_draw_baseline_file_raw = (os.getenv("PM_DRAW_BASELINE_FILE") or "").strip()
+    pm_draw_baseline_file = Path(pm_draw_baseline_file_raw).expanduser() if pm_draw_baseline_file_raw else None
+    pm_draw_baseline_p = float(os.getenv("PM_DRAW_BASELINE_P", "0.28") or "0.28")
+    pm_draw_book_prob_mult = float(os.getenv("PM_DRAW_BOOK_PROB_MULT", "0.95") or "0.95")
+    pm_draw_edge_min_pct = float(os.getenv("PM_DRAW_EDGE_MIN_PCT", "2.0") or "2.0")
+    pm_draw_edge_exit_pct = float(os.getenv("PM_DRAW_EDGE_EXIT_PCT", "0.5") or "0.5")
+    pm_draw_max_price = float(os.getenv("PM_DRAW_MAX_PRICE", "0.45") or "0.45")
+    pm_draw_require_3way = (os.getenv("PM_DRAW_REQUIRE_3WAY", "0") or "0").strip().lower() in {"1", "true", "yes"}
+    pm_draw_fav_min = float(os.getenv("PM_DRAW_FAV_MIN", "0.35") or "0.35")
+    pm_draw_fav_max = float(os.getenv("PM_DRAW_FAV_MAX", "0.65") or "0.65")
 
     freshness_max_age_s = float(os.getenv("FRESHNESS_MAX_AGE_SECS", "60") or "60")
 
@@ -761,6 +791,15 @@ def load_config() -> Config:
         pm_trend_move_min_pct=pm_trend_move_min_pct,
         pm_trend_exit_move_min_pct=pm_trend_exit_move_min_pct,
         pm_trend_auto_side=pm_trend_auto_side,
+        pm_draw_baseline_file=pm_draw_baseline_file,
+        pm_draw_baseline_p=pm_draw_baseline_p,
+        pm_draw_book_prob_mult=pm_draw_book_prob_mult,
+        pm_draw_edge_min_pct=pm_draw_edge_min_pct,
+        pm_draw_edge_exit_pct=pm_draw_edge_exit_pct,
+        pm_draw_max_price=pm_draw_max_price,
+        pm_draw_require_3way=pm_draw_require_3way,
+        pm_draw_fav_min=pm_draw_fav_min,
+        pm_draw_fav_max=pm_draw_fav_max,
         freshness_max_age_s=freshness_max_age_s,
         clob_depth_levels=clob_depth_levels,
         pm_orderbook_workers=pm_orderbook_workers,
@@ -1175,6 +1214,15 @@ def write_outputs(  # pyright: ignore
         "pm_trend_move_min_pct": float(cfg.pm_trend_move_min_pct),
         "pm_trend_exit_move_min_pct": float(cfg.pm_trend_exit_move_min_pct),
         "pm_trend_auto_side": bool(cfg.pm_trend_auto_side),
+        "pm_draw_baseline_file": str(cfg.pm_draw_baseline_file) if cfg.pm_draw_baseline_file else None,
+        "pm_draw_baseline_p": float(cfg.pm_draw_baseline_p),
+        "pm_draw_book_prob_mult": float(cfg.pm_draw_book_prob_mult),
+        "pm_draw_edge_min_pct": float(cfg.pm_draw_edge_min_pct),
+        "pm_draw_edge_exit_pct": float(cfg.pm_draw_edge_exit_pct),
+        "pm_draw_max_price": float(cfg.pm_draw_max_price),
+        "pm_draw_require_3way": bool(cfg.pm_draw_require_3way),
+        "pm_draw_fav_min": float(cfg.pm_draw_fav_min),
+        "pm_draw_fav_max": float(cfg.pm_draw_fav_max),
         # Lead–lag gating parameters (portal-facing, non-secret)
         "lead_lag_net_edge_min_pct": cfg.lead_lag_net_edge_min_pct,
         "lead_lag_spread_cost_cap_pct": cfg.lead_lag_spread_cost_cap_pct,
@@ -1492,7 +1540,7 @@ def write_outputs(  # pyright: ignore
             ]
 
         pm_clob = PolymarketClobPublic(base_url=cfg.polymarket_clob_base_url)
-        kr_spot = KrakenSpotPublic(base_url=cfg.kraken_spot_base_url) if cfg.strategy_mode != "pm_trend" else None
+        kr_spot = KrakenSpotPublic(base_url=cfg.kraken_spot_base_url) if cfg.strategy_mode not in {"pm_trend", "pm_draw"} else None
         deribit = DeribitOptionsPublic()
         gamma = PolymarketGammaPublic()
         # Portal expects Gamma to be present; mark it OK by default and flip to FAIL on actual errors.
@@ -1514,7 +1562,18 @@ def write_outputs(  # pyright: ignore
             pm_scan_pages = int(os.getenv("PM_SCAN_PAGES", "3") or "3")
             pm_scan_orderbook_sample = int(os.getenv("PM_SCAN_ORDERBOOK_SAMPLE", "25") or "25")
             pm_scan_active_only = (os.getenv("PM_SCAN_ACTIVE_ONLY", "1") or "1").strip().lower() not in {"0", "false", "no"}
-            pm_scan_binary_only = (os.getenv("PM_SCAN_BINARY_ONLY", "1") or "1").strip().lower() not in {"0", "false", "no"}
+            # Default to binary-only for trend/lead_lag; allow multi-outcome markets when trading Draw.
+            pm_scan_binary_default = "0" if cfg.strategy_mode == "pm_draw" else "1"
+            pm_scan_binary_only = (os.getenv("PM_SCAN_BINARY_ONLY", pm_scan_binary_default) or pm_scan_binary_default).strip().lower() not in {"0", "false", "no"}
+
+            # Safety: if draw strategy requires true 3-way (1X2) markets, binary-only scanning makes it impossible
+            # to discover any such markets. Prefer correctness over honoring a conflicting env var.
+            if cfg.strategy_mode == "pm_draw" and bool(getattr(cfg, "pm_draw_require_3way", False)) and pm_scan_binary_only:
+                print(
+                    "[agent] pm_scan: PM_DRAW_REQUIRE_3WAY=1 requires multi-outcome markets; overriding PM_SCAN_BINARY_ONLY=0",
+                    flush=True,
+                )
+                pm_scan_binary_only = False
             pm_scan_search = (os.getenv("PM_SCAN_SEARCH") or "").strip() or None
             pm_scan_order = (os.getenv("PM_SCAN_ORDER") or "createdAt").strip() or "createdAt"
             pm_scan_direction = (os.getenv("PM_SCAN_DIRECTION") or "desc").strip() or "desc"
@@ -1543,18 +1602,50 @@ def write_outputs(  # pyright: ignore
                         flush=True,
                     )
                     t_scan0 = time.perf_counter()
-                    markets = gamma.list_markets(
-                        limit=pm_scan_limit,
-                        pages=pm_scan_pages,
-                        offset=pm_scan_offset,
-                        # Gamma's `active` flag is not a reliable proxy for "currently open".
-                        # Filtering on `closed=false` is what yields current markets.
-                        active=None,
-                        closed=False if pm_scan_active_only else None,
-                        order=pm_scan_order,
-                        direction=pm_scan_direction,
-                        search=pm_scan_search,
-                    )
+                    # Gamma's /markets search behavior has historically varied.
+                    # For draw trading, try a few draw-related searches (and a no-search fallback)
+                    # then dedupe by slug.
+                    search_terms: list[str | None]
+                    if pm_scan_search is not None:
+                        search_terms = [pm_scan_search]
+                    elif cfg.strategy_mode == "pm_draw":
+                        search_terms = [" vs ", "draw", "tie", None]
+                    else:
+                        search_terms = [None]
+
+                    markets_by_slug: dict[str, GammaMarketListing] = {}
+                    # If search is ignored upstream, scanning more offsets still discovers more markets.
+                    extra_blocks = 3 if cfg.strategy_mode == "pm_draw" else 1
+                    try:
+                        extra_blocks = int(os.getenv("PM_SCAN_EXTRA_BLOCKS", str(extra_blocks)) or str(extra_blocks))
+                    except Exception:
+                        extra_blocks = 3 if cfg.strategy_mode == "pm_draw" else 1
+                    extra_blocks = max(1, min(int(extra_blocks), 10))
+                    block_size = int(pm_scan_limit) * int(pm_scan_pages)
+
+                    for st in search_terms:
+                        try:
+                            for block_i in range(int(extra_blocks)):
+                                ms = gamma.list_markets(
+                                    limit=pm_scan_limit,
+                                    pages=pm_scan_pages,
+                                    offset=int(pm_scan_offset) + int(block_i) * int(block_size),
+                                    # Gamma's `active` flag is not a reliable proxy for "currently open".
+                                    # Filtering on `closed=false` is what yields current markets.
+                                    active=None,
+                                    closed=False if pm_scan_active_only else None,
+                                    order=pm_scan_order,
+                                    direction=pm_scan_direction,
+                                    search=st,
+                                )
+                                for m in ms:
+                                    if m.slug and m.slug not in markets_by_slug:
+                                        markets_by_slug[m.slug] = m
+                        except Exception:
+                            # If a search term is not supported, fall back to other terms.
+                            continue
+
+                    markets = list(markets_by_slug.values())
                     scan_ms = float((time.perf_counter() - t_scan0) * 1000.0)
                     print(f"[agent] pm_scan: listed {len(markets)} markets in {scan_ms:.0f}ms", flush=True)
                     cache.pm_scan_last_run_ms = now_ms
@@ -1766,6 +1857,8 @@ def write_outputs(  # pyright: ignore
                             return (liq, vol, created)
 
                         desired_outcome = "Yes" if cfg.lead_lag_side == "YES" else "No"
+                        if cfg.strategy_mode == "pm_draw":
+                            desired_outcome = "Draw"
                         eligible: list[GammaMarketListing] = []
                         for m in markets:
                             outs = list(m.outcomes or [])
@@ -1773,8 +1866,29 @@ def write_outputs(  # pyright: ignore
                             is_binary = (len(outs) == 2 and len(toks) == 2)
                             if pm_scan_binary_only and not is_binary:
                                 continue
-                            if not is_binary:
+                            if cfg.strategy_mode != "pm_draw" and not is_binary:
                                 continue
+                            if cfg.strategy_mode == "pm_draw":
+                                draw_tok = resolve_token_id_from_listing(
+                                    outcomes=[str(x) for x in outs],
+                                    token_ids=[str(x) for x in toks],
+                                    desired_outcome=desired_outcome,
+                                )
+                                has_3way_draw = bool(draw_tok) and (len(outs) == 3 and len(toks) == 3)
+                                is_draw_prop = bool(is_binary and is_draw_market_question(m.question))
+
+                                # Filter to likely match-style markets to avoid unrelated "Draw" outcomes.
+                                if (has_3way_draw or is_draw_prop) and not is_likely_match_question(m.question):
+                                    continue
+
+                                # If explicitly requiring 3-way markets, reject draw-proposition binaries.
+                                if cfg.pm_draw_require_3way:
+                                    if not has_3way_draw:
+                                        continue
+                                else:
+                                    # Otherwise accept either explicit 3-way Draw or draw-proposition binary markets.
+                                    if not (draw_tok or is_draw_prop):
+                                        continue
                             if not m.slug:
                                 continue
                             eligible.append(m)
@@ -1783,6 +1897,20 @@ def write_outputs(  # pyright: ignore
                         eligible_sorted = sorted(eligible, key=_score, reverse=True)
 
                         def _token_for_desired_outcome(m: GammaMarketListing) -> str | None:
+                            outs = [str(x) for x in (m.outcomes or [])]
+                            toks = [str(x) for x in (m.clob_token_ids or [])]
+                            if cfg.strategy_mode == "pm_draw":
+                                # Prefer explicit 3-way Draw outcome if present.
+                                draw_tok = resolve_token_id_from_listing(outcomes=outs, token_ids=toks, desired_outcome=desired_outcome)
+                                if draw_tok:
+                                    return draw_tok
+
+                                # Fallback: binary draw-proposition market -> we want the YES token.
+                                if is_draw_market_question(m.question):
+                                    y, n = _coerce_yes_no_tokens(m)
+                                    return y
+
+                                return None
                             y, n = _coerce_yes_no_tokens(m)
                             if not y or not n:
                                 return None
@@ -1796,6 +1924,23 @@ def write_outputs(  # pyright: ignore
                         # Cache bid/ask checks within the scan tick to limit API calls.
                         bidask_cache: dict[str, tuple[float | None, float | None]] = {}
 
+                        def _get_bid_ask(tok: str) -> tuple[float | None, float | None]:
+                            if tok in bidask_cache:
+                                return bidask_cache[tok]
+                            ob = pm_clob.get_orderbook(tok)
+                            b, a = best_bid_ask(ob if isinstance(ob, dict) else {"data": ob})
+                            bidask_cache[tok] = (b, a)
+                            return b, a
+
+                        def _mid_price(tok: str) -> float | None:
+                            try:
+                                b, a = _get_bid_ask(tok)
+                                if b is None or a is None:
+                                    return None
+                                return float((float(b) + float(a)) / 2.0)
+                            except Exception:
+                                return None
+
                         for m in eligible_sorted:
                             if len(selected) >= int(pm_scan_trade_max_markets):
                                 break
@@ -1805,16 +1950,29 @@ def write_outputs(  # pyright: ignore
                                 continue
 
                             if not pm_scan_require_two_sided:
+                                # If we are draw trading and enforcing favorite-range rules, apply them here too.
+                                if cfg.strategy_mode == "pm_draw" and (cfg.pm_draw_fav_min > 0 or cfg.pm_draw_fav_max > 0):
+                                    outs = [str(x) for x in (m.outcomes or [])]
+                                    toks = [str(x) for x in (m.clob_token_ids or [])]
+                                    if len(outs) == 3 and len(toks) == 3:
+                                        try:
+                                            draw_idx = next((i for i, o in enumerate(outs) if is_draw_outcome(o)), None)
+                                        except Exception:
+                                            draw_idx = None
+                                        if draw_idx is not None:
+                                            other_toks = [toks[i] for i in range(3) if i != int(draw_idx)]
+                                            mids = [mp for mp in (_mid_price(other_toks[0]), _mid_price(other_toks[1])) if mp is not None]
+                                            if len(mids) == 2:
+                                                fav_p = max(mids)
+                                                if cfg.pm_draw_fav_min > 0 and fav_p < float(cfg.pm_draw_fav_min):
+                                                    continue
+                                                if cfg.pm_draw_fav_max > 0 and fav_p > float(cfg.pm_draw_fav_max):
+                                                    continue
                                 selected.append(m)
                                 continue
 
                             try:
-                                if tok in bidask_cache:
-                                    b, a = bidask_cache[tok]
-                                else:
-                                    ob = pm_clob.get_orderbook(tok)
-                                    b, a = best_bid_ask(ob if isinstance(ob, dict) else {"data": ob})
-                                    bidask_cache[tok] = (b, a)
+                                b, a = _get_bid_ask(tok)
                                 checked_books += 1
                                 if b is None or a is None:
                                     rejected_one_sided += 1
@@ -1823,19 +1981,48 @@ def write_outputs(  # pyright: ignore
                                 if float(pm_scan_max_spread) > 0 and spread > float(pm_scan_max_spread):
                                     rejected_wide_spread += 1
                                     continue
+
+                                # Draw-only: optionally enforce favorite probability window for 3-way markets.
+                                if cfg.strategy_mode == "pm_draw" and (cfg.pm_draw_fav_min > 0 or cfg.pm_draw_fav_max > 0):
+                                    outs = [str(x) for x in (m.outcomes or [])]
+                                    toks = [str(x) for x in (m.clob_token_ids or [])]
+                                    if len(outs) == 3 and len(toks) == 3:
+                                        draw_idx = next((i for i, o in enumerate(outs) if is_draw_outcome(o)), None)
+                                        if draw_idx is not None:
+                                            other_toks = [toks[i] for i in range(3) if i != int(draw_idx)]
+                                            mid0 = _mid_price(other_toks[0])
+                                            mid1 = _mid_price(other_toks[1])
+                                            if mid0 is None or mid1 is None:
+                                                rejected_one_sided += 1
+                                                continue
+                                            fav_p = max(float(mid0), float(mid1))
+                                            if cfg.pm_draw_fav_min > 0 and fav_p < float(cfg.pm_draw_fav_min):
+                                                continue
+                                            if cfg.pm_draw_fav_max > 0 and fav_p > float(cfg.pm_draw_fav_max):
+                                                continue
                                 selected.append(m)
                             except Exception:
                                 rejected_one_sided += 1
                                 continue
 
-                        cache.pm_scan_selected_mkts = [
-                            {
-                                "name": str(m.question or m.slug or "pm-scan"),
-                                "polymarket": {"market_slug": str(m.slug), "outcome": desired_outcome},
-                                "kraken_spot": {"pair": cfg.kraken_spot_pair},
-                            }
-                            for m in selected
-                        ]
+                        cache.pm_scan_selected_mkts = []
+                        for m in selected:
+                            tok = _token_for_desired_outcome(m)
+                            outs = [str(x) for x in (m.outcomes or [])]
+                            chosen = desired_outcome
+                            if cfg.strategy_mode == "pm_draw" and outs:
+                                # Store the actual label when possible (for nicer logs).
+                                for outcome_label in outs:
+                                    if is_draw_outcome(str(outcome_label)):
+                                        chosen = str(outcome_label)
+                                        break
+                            cache.pm_scan_selected_mkts.append(
+                                {
+                                    "name": str(m.question or m.slug or "pm-scan"),
+                                    "polymarket": {"market_slug": str(m.slug), "outcome": chosen, "clob_token_id": tok},
+                                    "kraken_spot": {"pair": cfg.kraken_spot_pair},
+                                }
+                            )
                         cache.pm_scan_selected_at_ms = int(now_ms)
 
                         if pm_scan_require_two_sided:
@@ -2289,10 +2476,11 @@ def write_outputs(  # pyright: ignore
                 }
             except Exception as e:
                 live_status["pm_live_positions_error"] = str(e)
-        # Lead-lag / PM-trend strategy path:
+        # Lead-lag / Polymarket strategy path:
         # - lead_lag: Kraken spot leads, Polymarket CLOB lags
         # - pm_trend: Polymarket-only trend following (no external reference)
-        if cfg.strategy_mode in {"lead_lag", "pm_trend"}:
+        # - pm_draw: Polymarket-only draw-value strategy (baseline vs price)
+        if cfg.strategy_mode in {"lead_lag", "pm_trend", "pm_draw"}:
             if cfg.strategy_mode == "lead_lag" and lead_lag_engine is None:
                 raise RuntimeError("lead_lag_engine is required when STRATEGY_MODE=lead_lag")
 
@@ -2720,7 +2908,7 @@ def write_outputs(  # pyright: ignore
                     )
                     continue
 
-                if cfg.strategy_mode != "pm_trend":
+                if cfg.strategy_mode not in {"pm_trend", "pm_draw"}:
                     # Fetch spot once per pair
                     if pair not in spot_by_pair:
                         try:
@@ -2800,16 +2988,16 @@ def write_outputs(  # pyright: ignore
                         }
                     )
                 else:
-                    # PM-only strategy: no external reference.
-                    ctxs.append(
-                        {
-                            "market_name": market_name,
-                            "market_ref": market_ref,
-                            "token_id": token_id,
-                            "chosen_outcome": chosen_outcome,
-                            "auto_side_group": market_ref or None,
-                        }
-                    )
+                    # PM-only strategies: no external reference.
+                    ctx: dict[str, Any] = {
+                        "market_name": market_name,
+                        "market_ref": market_ref,
+                        "token_id": token_id,
+                        "chosen_outcome": chosen_outcome,
+                    }
+                    if cfg.strategy_mode == "pm_trend":
+                        ctx["auto_side_group"] = market_ref or None
+                    ctxs.append(ctx)
 
             # Fetch PM orderbooks (optionally in parallel).
             orderbook_by_token: dict[str, dict[str, Any] | None] = {}
@@ -2939,6 +3127,22 @@ def write_outputs(  # pyright: ignore
                     if cur_ret is None or float(ret) > float(cur_ret):
                         best_token_by_group[g] = tok
 
+            # PM-draw prepass: load bookmaker baseline file once per tick (optional).
+            pm_draw_baseline: DrawBaseline = DrawBaseline(by_slug={})
+            if cfg.strategy_mode == "pm_draw":
+                if cfg.pm_draw_baseline_file:
+                    try:
+                        pm_draw_baseline = load_draw_baseline(cfg.pm_draw_baseline_file)
+                        sources_health.setdefault("pm_draw", {})
+                        sources_health["pm_draw"] = {
+                            "ok": True,
+                            "baseline_file": str(cfg.pm_draw_baseline_file),
+                            "items": len(pm_draw_baseline.by_slug),
+                        }
+                    except Exception as e:
+                        sources_health.setdefault("pm_draw", {})
+                        sources_health["pm_draw"] = {"ok": False, "error": str(e), "baseline_file": str(cfg.pm_draw_baseline_file)}
+
             for ctx in ctxs:
                 market_name = str(ctx.get("market_name") or "market")
                 token_id = str(ctx.get("token_id") or "").strip()
@@ -2946,6 +3150,7 @@ def write_outputs(  # pyright: ignore
                 market_ref = cast(str | None, ctx.get("market_ref"))
                 pair = str(ctx.get("pair") or cfg.kraken_spot_pair).strip() or cfg.kraken_spot_pair
                 spot_price = float(ctx.get("spot_price") or float("nan"))
+                fair_p = None
 
                 # PM orderbook (bid/ask/mid)
                 bid: float | None = None
@@ -2962,7 +3167,7 @@ def write_outputs(  # pyright: ignore
                 else:
                     pm_mid = None
 
-                if pm_mid is None or (cfg.strategy_mode != "pm_trend" and not (spot_price == spot_price)):
+                if pm_mid is None or (cfg.strategy_mode not in {"pm_trend", "pm_draw"} and not (spot_price == spot_price)):
                     append_csv_row(
                         p_pm_paper_candidates,
                         [
@@ -3012,7 +3217,7 @@ def write_outputs(  # pyright: ignore
                     continue
 
                 # Freshness gating (safety): if last successful tick is too old, do not trade.
-                if cfg.strategy_mode == "pm_trend":
+                if cfg.strategy_mode in {"pm_trend", "pm_draw"}:
                     # pm_mid is computed this tick; treat as age 0.
                     pm_age = 0.0
                     is_fresh = pm_age <= cfg.freshness_max_age_s
@@ -3040,6 +3245,15 @@ def write_outputs(  # pyright: ignore
                     except Exception:
                         pm_ret = None
                         edge_pct = None
+                elif cfg.strategy_mode == "pm_draw":
+                    # Value edge in percent points: baseline_p - pm_price.
+                    slug = str(market_ref or "").strip()
+                    base_p = pm_draw_baseline.get(slug) if slug else None
+                    if base_p is None:
+                        base_p = float(cfg.pm_draw_baseline_p)
+                    base_p = clamp01(float(base_p) * float(cfg.pm_draw_book_prob_mult))
+                    fair_p = float(base_p)
+                    edge_pct = (float(base_p) - float(pm_mid)) * 100.0
                 else:
                     # Lead-lag: update history and compute edge
                     if lead_lag_engine is not None:
@@ -3085,14 +3299,20 @@ def write_outputs(  # pyright: ignore
                         {
                             "ts": ts,
                             "market": market_name,
-                            "fair_p": 0.0,
+                            "fair_p": float(fair_p) if fair_p is not None else 0.0,
                             "pm_price": float(pm_mid),
                             "edge": float(edge_pct),
-                            "sources": "pm_clob" if cfg.strategy_mode == "pm_trend" else "kraken_spot+pm_clob",
+                            "sources": (
+                                "pm_clob" if cfg.strategy_mode == "pm_trend" else ("pm_clob+baseline" if cfg.strategy_mode == "pm_draw" else "kraken_spot+pm_clob")
+                            ),
                             "notes": (
                                 f"pm_trend lookback={cfg.pm_trend_lookback_points} pm_ret={pm_ret:.4f}%"
                                 if cfg.strategy_mode == "pm_trend" and pm_ret is not None
-                                else f"lead_lag side={cfg.lead_lag_side} pair={pair} spot_ret={spot_ret:.4f}% pm_ret={pm_ret:.4f}%"
+                                else (
+                                    f"pm_draw baseline_p={fair_p:.4f} pm_price={pm_mid:.4f}"
+                                    if cfg.strategy_mode == "pm_draw" and fair_p is not None
+                                    else f"lead_lag side={cfg.lead_lag_side} pair={pair} spot_ret={spot_ret:.4f}% pm_ret={pm_ret:.4f}%"
+                                )
                             ),
                         }
                     )
@@ -3192,6 +3412,56 @@ def write_outputs(  # pyright: ignore
                             "",
                             "skip",
                             "avoid_price_zone",
+                        ],
+                        keep_last=5000,
+                    )
+                    continue
+
+                # Draw-specific guard: avoid buying very expensive draw tokens.
+                if cfg.strategy_mode == "pm_draw" and float(cfg.pm_draw_max_price) > 0 and float(pm_mid) > float(cfg.pm_draw_max_price):
+                    append_csv_row(
+                        p_pm_paper_candidates,
+                        [
+                            "ts",
+                            "market",
+                            "market_ref",
+                            "token",
+                            "outcome",
+                            "pm_bid",
+                            "pm_ask",
+                            "pm_mid",
+                            "odds",
+                            "odds_allowed",
+                            "fair_p",
+                            "ev",
+                            "edge",
+                            "spread",
+                            "cost_est",
+                            "edge_net",
+                            "signal",
+                            "decision",
+                            "reason",
+                        ],
+                        [
+                            ts,
+                            market_name,
+                            market_ref or "",
+                            token_id,
+                            chosen_outcome or "",
+                            bid if bid is not None else "",
+                            ask if ask is not None else "",
+                            float(pm_mid),
+                            "",
+                            "",
+                            float(fair_p) if fair_p is not None else "",
+                            "",
+                            float(edge_pct) if edge_pct is not None else "",
+                            "",
+                            "",
+                            "",
+                            "watch",
+                            "skip",
+                            "draw_too_expensive",
                         ],
                         keep_last=5000,
                     )
@@ -3328,6 +3598,14 @@ def write_outputs(  # pyright: ignore
                     live_status["lead_lag_spot_noise_pct"] = None
                     live_status["lead_lag_spread_cost_pct"] = float(spread_cost_pct) if spread_cost_pct is not None else None
                     spot_move_ok = edge_pct is not None and float(edge_pct) >= float(spot_move_min_dyn)
+                elif cfg.strategy_mode == "pm_draw":
+                    # PM-only: require sufficient value edge vs baseline.
+                    spot_noise_pct = None
+                    spot_move_min_dyn = float(cfg.pm_draw_edge_min_pct)
+                    live_status["lead_lag_spot_move_min_pct_dynamic"] = None
+                    live_status["lead_lag_spot_noise_pct"] = None
+                    live_status["lead_lag_spread_cost_pct"] = float(spread_cost_pct) if spread_cost_pct is not None else None
+                    spot_move_ok = edge_pct is not None and float(edge_pct) >= float(spot_move_min_dyn)
                 else:
                     # Adaptive spot move threshold: require spot move > recent noise and > spread cost proxy.
                     spot_noise_pct: float | None = None
@@ -3375,7 +3653,10 @@ def write_outputs(  # pyright: ignore
                     except Exception:
                         pm_up_move_pct = 0.0
 
-                enter_raw = (not in_pos) and spot_move_ok and float(edge_pct) >= float(cfg.lead_lag_edge_min_pct)
+                if cfg.strategy_mode == "pm_draw":
+                    enter_raw = (not in_pos) and bool(spot_move_ok)
+                else:
+                    enter_raw = (not in_pos) and spot_move_ok and float(edge_pct) >= float(cfg.lead_lag_edge_min_pct)
                 exit_ok = False
                 exit_reason = ""
                 if in_pos:
@@ -3383,6 +3664,10 @@ def write_outputs(  # pyright: ignore
                         if float(edge_pct) <= float(cfg.pm_trend_exit_move_min_pct):
                             exit_ok = True
                             exit_reason = "trend_gone"
+                    elif cfg.strategy_mode == "pm_draw":
+                        if float(edge_pct) <= float(cfg.pm_draw_edge_exit_pct):
+                            exit_ok = True
+                            exit_reason = "value_gone"
                     else:
                         if float(edge_pct) <= float(cfg.lead_lag_edge_exit_pct):
                             exit_ok = True
@@ -3604,7 +3889,12 @@ def write_outputs(  # pyright: ignore
                     if auto_side_reason:
                         reason = auto_side_reason
                     elif not spot_move_ok:
-                        reason = "trend_move_too_small" if cfg.strategy_mode == "pm_trend" else "spot_move_too_small"
+                        if cfg.strategy_mode == "pm_trend":
+                            reason = "trend_move_too_small"
+                        elif cfg.strategy_mode == "pm_draw":
+                            reason = "draw_edge_too_small"
+                        else:
+                            reason = "spot_move_too_small"
                     elif float(edge_pct) < float(cfg.lead_lag_edge_min_pct):
                         reason = "low_edge"
                     elif enter_block_reason:
@@ -3698,6 +3988,12 @@ def write_outputs(  # pyright: ignore
                         paper_cash -= notional
                         if cfg.strategy_mode == "pm_trend":
                             paper_notes = f"pm_trend pm_ret={edge_pct:.4f}% max_usdc={max_usdc:.2f}" if max_usdc is not None else f"pm_trend pm_ret={edge_pct:.4f}%"
+                        elif cfg.strategy_mode == "pm_draw":
+                            paper_notes = (
+                                f"pm_draw edge_pp={edge_pct:.2f} baseline_p={fair_p:.4f} max_usdc={max_usdc:.2f}"
+                                if (max_usdc is not None and fair_p is not None)
+                                else (f"pm_draw edge_pp={edge_pct:.2f} baseline_p={fair_p:.4f}" if fair_p is not None else f"pm_draw edge_pp={edge_pct:.2f}")
+                            )
                         else:
                             paper_notes = f"lead_lag edge={edge_pct:.4f}% max_usdc={max_usdc:.2f}" if max_usdc is not None else f"lead_lag edge={edge_pct:.4f}%"
 
@@ -3729,7 +4025,11 @@ def write_outputs(  # pyright: ignore
                     notes = (
                         f"pm_trend exit={exit_reason} pm_ret={edge_pct:.4f}%"
                         if cfg.strategy_mode == "pm_trend"
-                        else f"lead_lag exit={exit_reason} edge={edge_pct:.4f}%"
+                        else (
+                            f"pm_draw exit={exit_reason} edge_pp={edge_pct:.2f} baseline_p={fair_p:.4f}"
+                            if cfg.strategy_mode == "pm_draw" and fair_p is not None
+                            else (f"pm_draw exit={exit_reason} edge_pp={edge_pct:.2f}" if cfg.strategy_mode == "pm_draw" else f"lead_lag exit={exit_reason} edge={edge_pct:.4f}%")
+                        )
                     )
                     append_csv_row(
                         p_pm_orders,
@@ -3780,7 +4080,7 @@ def write_outputs(  # pyright: ignore
                             "last_mid": float(pm_mid),
                         }
                         paper_cash -= notional
-                        mode_tag = "pm_trend" if cfg.strategy_mode == "pm_trend" else "lead_lag"
+                        mode_tag = "pm_trend" if cfg.strategy_mode == "pm_trend" else ("pm_draw" if cfg.strategy_mode == "pm_draw" else "lead_lag")
                         paper_notes = (
                             f"{mode_tag} scale_in pm_up_move={pm_up_move_pct:.3f}% edge={edge_pct:.4f}%"
                             + (f" max_usdc={scale_max_usdc:.2f}" if scale_max_usdc is not None else "")
@@ -3853,14 +4153,14 @@ def write_outputs(  # pyright: ignore
                         bid if bid is not None else "",
                         ask if ask is not None else "",
                         float(pm_mid),
+                        (1.0 / float(pm_mid)) if float(pm_mid) > 0 else "",
                         "",
-                        "",
-                        "",
+                        float(fair_p) if fair_p is not None else "",
                         "",
                         float(edge_pct),
                         "",
                         "",
-                        "",
+                        float(net_edge_pct) if net_edge_pct is not None else "",
                         "hold" if in_pos else "watch",
                         "skip",
                         reason or "no_signal",
@@ -5895,6 +6195,13 @@ def main() -> None:
                 except Exception:
                     pass
                 print(f"[agent] tick failed ({consecutive_failures}): {e}")
+                try:
+                    if (os.getenv("AGENT_TRACEBACK", "0") or "0").strip().lower() in {"1", "true", "yes"}:
+                        import traceback as _tb
+
+                        print(_tb.format_exc())
+                except Exception:
+                    pass
                 files = []
 
             # No live trading yet: the goal here is to make end-to-end data → portal work.

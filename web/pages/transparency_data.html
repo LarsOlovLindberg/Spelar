@@ -23,10 +23,10 @@
   </div>
 </div>
 
-<h3>Exempel på observationer (trend/edge)</h3>
+<h3>Exempel på observationer (edge)</h3>
 <div class="grid">
   <div class="card" style="grid-column: span 12;">
-    <p class="muted">Det här är en tabell med senaste observationerna som ligger till grund för beslut (i <span class="mono">pm_trend</span> är “edge” i praktiken trendstyrka).</p>
+    <p class="muted">Det här är en tabell med senaste observationerna som ligger till grund för beslut (i <span class="mono">pm_draw</span> är “edge” skillnaden mellan baseline-sannolikhet och Polymarket-pris för Draw).</p>
     <div data-csv="edge_signals_live.csv" data-max-rows="50"></div>
   </div>
 </div>
@@ -35,19 +35,19 @@
 <div class="grid">
   <div class="card" style="grid-column: span 8">
     <h4>Real-time Edge Calculator</h4>
-    <p class="muted">Brutto signal/trend → spread → avgifter → netto. Trigger när gates släpper igenom.</p>
+    <p class="muted">Brutto edge (baseline − PM) → spread → avgifter → netto. Trigger när gates släpper igenom.</p>
     <div data-edge-calculator="edge_calculator_live.csv"></div>
   </div>
   <div class="card" style="grid-column: span 4">
     <h4>Latens & freshness</h4>
-    <p class="muted">I <span class="mono">pm_trend</span> är market lag ofta N/A; viktigast är att tick och systemlatens är fräscha.</p>
+    <p class="muted">Viktigast är att tick och systemlatens är fräscha (då edge annars blir inaktuell).</p>
     <div data-lag-latency="live_status.json"></div>
   </div>
 </div>
 
 <div class="card" style="margin-top:16px">
   <h4>Polymarket – nya möjligheter (Gamma scan)</h4>
-  <p class="muted">Feed över nyligen listade/aktiva marknader + kandidater (binära). Använd för att hitta fler lägen att lägga in i market_map.</p>
+  <p class="muted">Feed över nyligen listade/aktiva marknader + kandidater. Använd för att hitta fler relevanta matchmarknader (Draw/1X2) att lägga in i market_map.</p>
   <div data-csv="pm_scan_candidates.csv" data-max-rows="60"></div>
   <div data-json="pm_markets_index.json"></div>
 </div>

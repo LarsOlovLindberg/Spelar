@@ -1,45 +1,45 @@
 <h2>Om strategin</h2>
 
-<p><strong>Idén är enkel:</strong> vi handlar <em>trend i Polymarket-priset</em> – utan extern referens. När en outcome-token börjar röra sig uppåt (tillräckligt snabbt) antar vi att rörelsen kan fortsätta en bit, går in tidigt, kan skala in om trenden fortsätter, och går ut när trenden är borta.</p>
+<p><strong>Idén är enkel:</strong> vi handlar <em>oavgjort (Draw)</em> som en edge mellan en baseline-sannolikhet (från bookmaker/sportsbook) och Polymarkets pris (≈ sannolikhet). När Draw-token är billigare än vår baseline med tillräcklig marginal köper vi Draw, och går ur när marknaden reprissätter och edgen försvinner.</p>
 
 <div class="grid">
   <div class="card">
     <h4>Vad vi mäter</h4>
-    <p class="muted">Allt bygger på Polymarket CLOB (orderbok) – best bid/ask och mid.</p>
+    <p class="muted">Priset kommer från Polymarket CLOB (orderbok) – best bid/ask och mid.</p>
     <ul>
-      <li><strong>pm_mid</strong>: (bid+ask)/2 för token</li>
-      <li><strong>pm_ret_pct</strong>: % rörelse över ett kort fönster</li>
-      <li><strong>spread_cost_pct</strong> &amp; fees: uppskattade kostnader</li>
+      <li><strong>pm_mid_draw</strong>: (bid+ask)/2 för Draw-token</li>
+      <li><strong>baseline_p_draw</strong>: vår baseline-sannolikhet för oavgjort (justerad)</li>
+      <li><strong>edge_pct</strong>: (baseline − pm_mid) i procentenheter</li>
     </ul>
   </div>
   <div class="card">
     <h4>Så systemet agerar</h4>
     <ul>
-      <li>Identifierar när token börjar trenda upp</li>
-      <li>Väljer sida automatiskt (YES/NO) per marknad</li>
-      <li>Går ut när trenden avtar (eller via stop/max hold)</li>
+      <li>Hittar matchmarknader där Draw finns som outcome (typiskt 1X2)</li>
+      <li>Köper Draw när edgen är tillräckligt stor och priset är rimligt</li>
+      <li>Säljer/avslutar när edgen krymper (eller när marknaden stänger)</li>
     </ul>
   </div>
 </div>
 
 <h3>Viktiga förtydliganden</h3>
 <ul>
-  <li>Ingen extern referens: <strong>ingen Kraken/spot</strong> i besluten</li>
-  <li>Ingen “håll till slutet”-logik: positioner är tänkta att vara korta</li>
-  <li>Vi handlar prisrörelse i tokens – det innebär exponering medan positionen är öppen</li>
+  <li>Baseline är en <strong>extern referens</strong> (sportsbook-odds → sannolikhet), men priset vi handlar är alltid Polymarket CLOB.</li>
+  <li>Strategin är inte byggd för “håll till settlement” som huvudplan; målet är reprissättning (edge in → edge out).</li>
+  <li>Vi gör konservativa kvalitetsfilter (likviditet/spread/pris-tak) för att undvika att edgen äts upp av microstructure.</li>
 </ul>
 
-<h3>Exakt strategi (pm_trend)</h3>
-<p><strong>Syfte:</strong> haka på en påbörjad trend i Polymarket-priset med strikt riskkontroll. Vi försöker inte förutsäga slututfall; vi försöker handla <em>rörelsen</em>.</p>
+<h3>Exakt strategi (pm_draw)</h3>
+<p><strong>Syfte:</strong> hitta och handla felprissättning i Draw jämfört med en baseline-sannolikhet. Vi försöker inte vara bäst på att “tippa matchen”; vi försöker vara disciplinerat bättre än marknadens Draw-pris vid vissa tillfällen.</p>
 
 <div class="grid">
   <div class="card" style="grid-column: span 12;">
     <h4>Inputs (per marknad)</h4>
     <ul>
-      <li><strong>Pris</strong>: Polymarket CLOB best bid/ask och mid för en outcome-token.</li>
+      <li><strong>Pris</strong>: Polymarket CLOB best bid/ask och mid för Draw-token.</li>
       <li><strong>Tid</strong>: tick-loop (typiskt var <span class="mono">INTERVAL_S</span> sekund).</li>
-      <li><strong>Trend</strong>: rullande mid-historik och % rörelse över <span class="mono">PM_TREND_LOOKBACK_POINTS</span>.</li>
-      <li><strong>Auto-sida</strong>: jämför YES och NO inom samma marknad och väljer den sida som trendar bäst (<span class="mono">PM_TREND_AUTO_SIDE</span>).</li>
+      <li><strong>Baseline</strong>: Draw-sannolikhet från fil (<span class="mono">PM_DRAW_BASELINE_FILE</span>) eller fallback (<span class="mono">PM_DRAW_BASELINE_P</span>), ev. justerad av <span class="mono">PM_DRAW_BOOK_PROB_MULT</span>.</li>
+      <li><strong>Urval</strong>: marknader hittas via Gamma-scan (och/eller market_map).</li>
     </ul>
   </div>
 </div>
@@ -48,19 +48,18 @@
   <div class="card">
     <h4>Definitioner</h4>
     <ul>
-      <li><strong>pm_ret_pct</strong>: procentuell rörelse för PM mid över ett kort fönster.</li>
-      <li><strong>edge_pct</strong>: i <span class="mono">pm_trend</span> är edge samma sak som <strong>pm_ret_pct</strong> (trendstyrka).</li>
-      <li><strong>spread_cost_pct</strong>: uppskattad kostnad i procentenheter från half-spread (entry vs mid).</li>
-      <li><strong>fees_pct</strong>: uppskattad fee + extra cost (konfig) i procentenheter.</li>
-      <li><strong>net_edge_pct</strong> = edge_pct − spread_cost_pct − fees_pct.</li>
+      <li><strong>pm_mid_draw</strong>: Polymarkets Draw-mid (≈ marknadens draw-prob).</li>
+      <li><strong>baseline_p_draw</strong>: baseline draw-sannolikhet (från bookmaker eller fallback), ev. konservativt justerad.</li>
+      <li><strong>edge_pct</strong>: (baseline_p_draw − pm_mid_draw) · 100.</li>
+      <li><strong>gates</strong>: pris-tak + spread/likviditet + freshness innan handel tillåts.</li>
     </ul>
   </div>
   <div class="card">
-    <h4>Auto-sida (YES/NO)</h4>
+    <h4>3-vägs marknader (1X2)</h4>
     <ul>
-      <li>Systemet skapar en kandidat för <strong>YES</strong> och en för <strong>NO</strong> (om marknaden är tvåsidig).</li>
-      <li>Det väljer <em>en</em> sida att handla: den med bäst trend (högst <strong>pm_ret_pct</strong>).</li>
-      <li>Det kan inte gå in i båda sidor samtidigt för samma marknad (reason t.ex. <span class="mono">not_best_side</span> / <span class="mono">other_side_open</span>).</li>
+      <li>För riktiga match-draw vill vi oftast ha 3 outcomes: Home / Draw / Away (<span class="mono">PM_DRAW_REQUIRE_3WAY</span>).</li>
+      <li>Vi handlar specifikt Draw-outcome, inte “Draw” i andra typer av marknader (t.ex. e-sport maps).</li>
+      <li>Som extra kvalitetsfilter kan vi kräva rimlig favoritstyrka via <span class="mono">PM_DRAW_FAV_MIN</span>/<span class="mono">PM_DRAW_FAV_MAX</span>.</li>
     </ul>
   </div>
 </div>
@@ -70,28 +69,19 @@
     <h4>Per tick (pseudo)</h4>
     <pre class="mono" style="white-space:pre-wrap;line-height:1.35;">
 for each market:
-  1) fetch PM orderbook (bid/ask/mid)
-  2) update rolling history and compute:
-    pm_ret_pct over PM_TREND_LOOKBACK_POINTS
-    edge_pct = pm_ret_pct
-  3) compute spread_cost_pct from PM bid/ask
-  4) (optional) auto-side selection (PM_TREND_AUTO_SIDE):
-    - compare YES vs NO trend and pick best side
-  5) entry precondition:
-    edge_pct >= PM_TREND_MOVE_MIN_PCT
-  6) quality gates (after-cost & microstructure):
-       - spread gate: spread_cost_pct <= LEAD_LAG_SPREAD_COST_CAP_PCT
-       - net edge gate: net_edge_pct >= LEAD_LAG_NET_EDGE_MIN_PCT
-       - liquidity gate: cap size by visible band liquidity (ask..ask+slippage_cap)
-       - min notional: require max_usdc >= LEAD_LAG_MIN_TRADE_NOTIONAL_USDC
-       - throttle: max orders per tick
-  7) if enter_ok: paper BUY (outcome token) and start tracking position
-  8) if in position:
-    - scale in when price moves in our favor
-    - exit when trend fades: edge_pct <= PM_TREND_EXIT_MOVE_MIN_PCT
-    - plus stop / max hold
+  1) fetch PM orderbook for Draw token (bid/ask/mid)
+  2) load baseline draw probability (file or fallback)
+  3) compute edge_pct = (baseline_p_draw - pm_mid_draw) * 100
+  4) entry gates:
+       - edge_pct >= PM_DRAW_EDGE_MIN_PCT
+       - pm_mid_draw <= PM_DRAW_MAX_PRICE
+       - basic spread/liquidity/freshness ok
+  5) if enter_ok: paper BUY Draw
+  6) if in position:
+       - exit when edge fades: edge_pct <= PM_DRAW_EDGE_EXIT_PCT
+       - or when market is closing/closed
     </pre>
-    <p class="muted">Obs: flera risk-gates råkar fortfarande heta <span class="mono">LEAD_LAG_*</span> (legacy prefix), men de används även i <span class="mono">pm_trend</span> som generella kostnads-/likviditetsfilter.</p>
+    <p class="muted">Obs: flera generella risk-gates har legacy-prefix (<span class="mono">LEAD_LAG_*</span>), men de fungerar som kostnads-/likviditetsfilter även här.</p>
   </div>
 </div>
 
@@ -109,7 +99,7 @@ for each market:
   <div class="card">
     <h4>Var man ser att det funkar</h4>
     <ul>
-      <li><span class="mono">edge_calculator_live.csv</span>: trend/edge, spread/fees, net edge + <em>reason</em>.</li>
+      <li><span class="mono">edge_calculator_live.csv</span>: edge-komponenter + <em>reason</em> när det blir trade/skip.</li>
       <li><span class="mono">pm_paper_candidates.csv</span>: per marknad: decision + reason (varför det blev trade/skip).</li>
       <li><span class="mono">pm_paper_trades.csv</span>: paper fills/skips.</li>
       <li><span class="mono">live_status.json</span>: gates, latens, och senaste tick-status.</li>

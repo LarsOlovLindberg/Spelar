@@ -138,7 +138,14 @@ class PolymarketGammaPublic:
             if direction:
                 params["direction"] = str(direction)
             if search:
-                params["search"] = str(search)
+                # Gamma search param naming varies across deployments.
+                # Provide several common aliases; unknown params are ignored server-side.
+                s = str(search)
+                params["search"] = s
+                params["searchTerm"] = s
+                params["search_term"] = s
+                params["query"] = s
+                params["q"] = s
 
             data = self._get_json("/markets", params=params)
             items_any: Any = data

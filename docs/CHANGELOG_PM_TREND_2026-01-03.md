@@ -1,5 +1,7 @@
 # Changelog: pm_trend rollout (2026-01-03)
 
+Note (2026-01-13): This is a historical changelog for the `pm_trend` rollout. The portal and agent have since added `pm_draw` and the portal copy now reflects `pm_draw` as the primary mode.
+
 ## Summary
 
 - Added `pm_trend`: Polymarket-only trend-following strategy mode.

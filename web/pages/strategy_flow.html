@@ -1,31 +1,31 @@
 <h2>Hur systemet tänker (visuellt)</h2>
 
-<p>Här är flödet i sin enklaste form. Inga formler, bara logik – och bara Polymarket-data.</p>
+<p>Här är flödet i sin enklaste form. Inga formler, bara logik – Polymarket-pris + en baseline-sannolikhet för oavgjort.</p>
 
 <div class="grid">
   <div class="card" style="grid-column: span 12;">
     <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
-      <span class="pill">1. Token börjar trenda (PM)</span>
+      <span class="pill">1. Hitta matchmarknad med Draw</span>
       <span class="muted">→</span>
-      <span class="pill">2. Välj sida (YES/NO)</span>
+      <span class="pill">2. Beräkna edge (baseline − PM)</span>
       <span class="muted">→</span>
-      <span class="pill">3. Gå in snabbt</span>
+      <span class="pill">3. Gå in när edge är stor</span>
       <span class="muted">→</span>
-      <span class="pill">4. Skala in om trenden håller</span>
+      <span class="pill">4. Håll medan edge består</span>
       <span class="muted">→</span>
-      <span class="pill">5. Gå ut när trenden är borta</span>
+      <span class="pill">5. Gå ut när edge är borta</span>
     </div>
   </div>
 </div>
 
 <div class="grid">
   <div class="card">
-    <h4>Ingång (när trenden är tydlig)</h4>
-    <p class="muted">Systemet agerar bara när prisrörelsen är mätbar över ett kort fönster — annars gör det ingenting.</p>
+    <h4>Ingång (när edgen är tydlig)</h4>
+    <p class="muted">Systemet agerar bara när Draw-priset är tillräckligt under baseline (och spread/likviditet/freshness är OK).</p>
   </div>
   <div class="card">
-    <h4>Utgång (när trenden försvinner)</h4>
-    <p class="muted">När rörelsen avtar finns inte samma skäl att vara kvar i positionen.</p>
+    <h4>Utgång (när edgen försvinner)</h4>
+    <p class="muted">När Draw reprissätts och edgen krymper finns inte samma skäl att vara kvar i positionen.</p>
   </div>
 </div>
 

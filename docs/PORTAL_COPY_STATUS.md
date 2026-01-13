@@ -1,8 +1,8 @@
 # Portal copy/status alignment
 
-Date: 2026-01-03
+Date: 2026-01-13
 
-Purpose: the static portal (`web/index.html` + `web/pages/*.html`) should describe what the system actually does today: Polymarket-only trend trading (`pm_trend`) with optional YES/NO auto-side selection.
+Purpose: the static portal (`web/index.html` + `web/pages/*.html`) should describe what the system actually does today: Draw value/edge trading (`pm_draw`) based on baseline probability vs Polymarket CLOB price.
 
 ## What changed
 
@@ -17,7 +17,8 @@ File: `web/index.html`
   - `not_best_side`, `no_best_side`, `other_side_open`
 - Kept a compatibility alias:
   - legacy `spot_move_too_small` is displayed as “Trend too small”.
-- Live-status panel now prefers displaying `pm_trend_*` parameters when present.
+- Live-status panel now prefers displaying `pm_draw_*` parameters when present (keeps `pm_trend_*`/legacy fallback).
+- Engine Room file list includes scan artifacts used by the current run (`pm_scan_candidates.csv`, `pm_markets_index.json`).
 
 ### Page fragments
 
@@ -29,11 +30,10 @@ Files:
 - `web/pages/strategy_tech.html`
 - `web/pages/transparency_data.html`
 
-All pages were updated to remove the old lead–lag/spot/reference narrative and describe:
+All pages were updated to describe:
 
-- Trend detection on Polymarket CLOB only
-- Auto-side selection (YES/NO)
-- Entry/scale/exit logic in trend terms
+- Draw value/edge: baseline probability vs PM mid price
+- Entry/exit in “edge in → edge out” terms
 - Observability via CSV/JSON snapshots
 
 ## Notes on legacy filenames
@@ -44,4 +44,4 @@ Some snapshot filenames still contain legacy naming (e.g. `lead_lag_health.json`
 
 - Start local server: `python -m http.server 5173 --directory .\web`
 - Open: `http://localhost:5173/`
-- Grep: ensure no remaining `lead–lag`, `spot`, `Kraken`, `reference` wording exists in portal pages.
+- Live check: `scripts/check-live-headers.ps1` plus spot-check one page contains `pm_draw` wording.

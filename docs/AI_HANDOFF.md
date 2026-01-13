@@ -7,6 +7,11 @@ Det här dokumentet är skrivet för nästa AI (eller nästa person) som tar öv
 - Portalen visar snapshot-data från `web/data/` (CSV/JSON) och laddar sidor som HTML-fragment från `web/pages/`.
 - “Riktig” data produceras på en VPS av Python-agenten i `vps/` och synkas till `web/data/` med PowerShell-scripts.
 
+## Status (2026-01-13)
+Vi kör nu primärt `STRATEGY_MODE=pm_draw`: en Draw-fokuserad value/edge-strategi där vi jämför
+bookmaker-implied baseline-sannolikhet för oavgjort mot Polymarkets Draw-pris (mid i CLOB).
+Portalen (copy + UI) är uppdaterad för att beskriva `pm_draw`.
+
 ## Repo-struktur (det viktigaste)
 - `web/index.html`: portalens shell + router + all JS/CSS (inline).
 - `web/pages/*.html`: sidfragment (inte fulla HTML-dokument) som laddas in i shell:en.
@@ -17,8 +22,12 @@ Det här dokumentet är skrivet för nästa AI (eller nästa person) som tar öv
 Nyare strategi-moduler:
 - `vps/strategies/lead_lag.py`: lead–lag edge (extern referens/spot leder, PM CLOB släpar).
 - `vps/connectors/kraken_spot_public.py`: nuvarande implementation av referens/spot (Kraken public).
+- `vps/strategies/pm_draw.py`: Draw value/edge (baseline vs Polymarket CLOB mid). Nyckel: undvik “Draw” i irrelevanta marknader via heuristik.
 
 Obs: UI/portalen är numera **Polymarket-only i text/diagnostik** (inga “Kraken …”-labels i webben), men backend kan fortfarande använda extern referens under huven.
+
+### pm_draw i en mening
+Handla Draw när $\text{edge} = (p_{\text{baseline}} - p_{\text{PM}})\cdot 100$ är stor nog, och gå ur när edgen försvinner.
 
 ## Portalen (UI)
 ### Router
@@ -115,9 +124,28 @@ Nyckel-variabler (översikt):
 - `KILLSWITCH_FILE` om finns/är aktiverad ska stoppa live
 
 Strategival (edge-definition):
-- `STRATEGY_MODE=lead_lag|fair_model`
-  - `lead_lag` är nu default om env-var saknas.
-  - `fair_model` är den äldre vägen (pm_price vs fair_p från Deribit/Kraken futures).
+- `STRATEGY_MODE=lead_lag|pm_trend|pm_draw|fair_model`
+  - `lead_lag`: extern referens (Kraken spot) → Polymarket CLOB lag.
+  - `pm_trend`: Polymarket-only trend (YES/NO auto-side kan användas för binära marknader).
+  - `pm_draw`: Polymarket-only draw-value (baseline vs Draw-pris).
+  - `fair_model`: äldre väg (pm_price vs fair_p från Deribit/Kraken futures).
+
+pm_draw – viktiga env (översikt):
+- `PM_DRAW_BASELINE_FILE` (valfri): CSV/JSON mapping `slug -> draw_prob|draw_odds`.
+- `PM_DRAW_BASELINE_P` fallback (default 0.28)
+- `PM_DRAW_BOOK_PROB_MULT` (default 0.95) för konservativ baseline
+- `PM_DRAW_EDGE_MIN_PCT` / `PM_DRAW_EDGE_EXIT_PCT`
+- `PM_DRAW_MAX_PRICE` (guard mot för dyr Draw)
+- `PM_DRAW_REQUIRE_3WAY` (kräv 1X2 Home/Draw/Away)
+- `PM_DRAW_FAV_MIN` / `PM_DRAW_FAV_MAX` (favorit-range gate baserat på de två icke-draw mids)
+
+Gamma scan (universe discovery) – viktiga env (översikt):
+- `PM_SCAN_ENABLE=1`
+- `PM_SCAN_USE_FOR_TRADING=1` (om scan ska kunna driva universe)
+- `PM_SCAN_SEARCH` (valfri). I `pm_draw` används annars en multi-term fallback (" vs ", "draw", "tie", None).
+- `PM_SCAN_ORDER`, `PM_SCAN_DIRECTION`, `PM_SCAN_OFFSET`, `PM_SCAN_LIMIT`, `PM_SCAN_PAGES`
+- `PM_SCAN_EXTRA_BLOCKS` (pm_draw default 3) för fler offset-block
+- `PM_SCAN_BINARY_ONLY` default är 0 i `pm_draw` (för att kunna hitta 3-way). Säkerhetsregel: om `PM_DRAW_REQUIRE_3WAY=1` så tvingas binary-only av.
 
 Lead–lag (kraken spot → pm clob) – viktiga env (översikt):
 - `KRAKEN_SPOT_PAIR=XBTUSD`
@@ -171,6 +199,11 @@ Lead–lag/paper (portal):
 - Polymarket Gamma parsing:
   - Gamma kan ibland returnera `outcomes`/`clobTokenIds` som JSON-encodade strängar.
   - Connectorn behöver tåla både list och sträng.
+
+- Lokalt körläge (Python-import gotcha):
+  - Kör helst agenten som modul så att package-importer fungerar:
+    - `python -m vps.vps_agent --once`
+  - Om du kör `python .\vps\vps_agent.py` kan du få `ModuleNotFoundError: No module named 'vps'` beroende på CWD/PYTHONPATH.
 
 ## Git-policy för det här repot
 - Commita: `web/index.html`, `web/pages/`, `scripts/`, `vps/`, `docs/`.
